@@ -1,0 +1,7 @@
+category: System
+min_client_version: '1.19.0'
+interface:
+  display_name: 'Manager Memory Query'
+  short_description: 'Query historical memory files (lessons, mistakes, daily logs) for context-aware decision making.'
+  builtin: true
+  hidden: true

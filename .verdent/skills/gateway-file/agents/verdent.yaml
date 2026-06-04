@@ -1,0 +1,8 @@
+category: System
+min_client_version: '1.19.0'
+interface:
+  display_name: 'Gateway File'
+  short_description: 'Send files, images, and videos to Feishu, Slack, or Telegram.'
+  default_prompt: 'When a task requires actively delivering a file, image, or video to a Feishu group, Slack channel, or Telegram target, use gateway-file instead of saying the capability is unavailable.'
+  builtin: true
+  hidden: true

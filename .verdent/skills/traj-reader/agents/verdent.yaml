@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Traj Reader'
+  short_description: 'Read and browse compact trajectory files offloaded during conversation compression.'
+  default_prompt: 'List all available trajectory channels and show the latest traj summary.'
+  builtin: true
+  hidden: true

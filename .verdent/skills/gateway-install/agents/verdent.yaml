@@ -1,0 +1,8 @@
+category: System
+min_client_version: '1.19.0'
+interface:
+  display_name: 'Gateway Install'
+  short_description: 'Guide Feishu, Slack, and Telegram gateway installation, config, pairing, and allowlist setup.'
+  default_prompt: 'When the user wants to configure a gateway channel, guide them step by step and update gateway.json or allowList.json when appropriate.'
+  builtin: true
+  hidden: true
