@@ -9,15 +9,16 @@
     "server": "tsx server.ts",
     "start": "tsx server.ts"
   },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "framer-motion": "^11.0.0",
-    "pg": "^8.13.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-    "tsx": "^4.7.0"
-  },
+"dependencies": {
+  "express": "^4.18.2",
+  "cors": "^2.8.5",
+  "framer-motion": "^11.0.0",
+  "pg": "^8.13.3",
+  "react": "^18.3.1",
+  "react-dom": "^18.3.1",
+  "tsx": "^4.7.0"
+},
+  
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@types/cors": "^2.8.17",
@@ -27,8 +28,7 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.1",
-    "tailwindcss": "^4.0.0",
-    "tsx": "^4.7.0",
+    "tailwindcss": "^4.0.0"
     "typescript": "^5.5.3",
     "vite": "^5.4.2"
   }
