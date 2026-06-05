@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && tsc server.ts --outDir dist-server --module commonjs --esModuleInterop true --skipLibCheck true",
-    "preview": "vite preview",
+    "build": "tsc -b && vite build",
     "server": "tsx server.ts",
-    "start": "node dist-server/server.js"
+    "start": "tsx server.ts"
   },
   "dependencies": {
     "express": "^4.18.2",
