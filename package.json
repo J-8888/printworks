@@ -1,1 +1,7 @@
-{"name":"design-then-build-preview","private":true,"version":"0.0.0","type":"module","scripts":{"dev":"vite","dev:server":"tsx server.ts","build":"vite build","start":"node --import tsx server.ts","typecheck":"tsc -b --pretty false","preview":"vite preview"},"dependencies":{"@tailwindcss/vite":"latest","@vitejs/plugin-react":"latest","better-sqlite3":"^12.10.0","cors":"^2.8.6","express":"^5.2.1","framer-motion":"latest","react":"latest","react-dom":"latest","react-router-dom":"latest","tailwindcss":"latest","typescript":"latest","vite":"latest"},"devDependencies":{"@types/better-sqlite3":"^7.6.13","@types/cors":"^2.8.19","@types/express":"^5.0.6","@types/node":"latest","@types/react":"latest","@types/react-dom":"latest","tsx":"^4.22.4"}}
+// Remove:
+"better-sqlite3": "...",
+"@types/better-sqlite3": "...",
+
+// Add:
+"pg": "^8.13.3",
+"@types/pg": "^8.11.10"
