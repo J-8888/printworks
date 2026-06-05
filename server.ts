@@ -29,7 +29,7 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-
+}
 
 // Middleware
 app.use(cors());
