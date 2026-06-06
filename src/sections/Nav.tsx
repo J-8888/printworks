@@ -1,11 +1,20 @@
 import React from 'react';
 import { IconCube, IconBell, IconPlus } from '@/icons';
+import type { Page } from '@/App';
 
 interface NavProps {
+  page: Page;
+  onNavigate: (page: Page) => void;
   onNewOrder: () => void;
 }
 
-export function Nav({ onNewOrder }: NavProps) {
+const NAV_LINKS: { label: string; page: Page }[] = [
+  { label: 'Orders', page: 'orders' },
+  { label: 'Customers', page: 'customers' },
+  { label: 'Archive', page: 'archive' },
+];
+
+export function Nav({ page, onNavigate, onNewOrder }: NavProps) {
   return (
     <header className="sticky top-0 z-30 bg-[#121418]/95 backdrop-blur border-b border-[#2e333d]">
       <div className="max-w-[1340px] mx-auto px-4 md:px-6 h-14 flex items-center gap-4">
@@ -20,21 +29,38 @@ export function Nav({ onNewOrder }: NavProps) {
           </div>
         </div>
 
-        {/* Nav links — desktop */}
+        {/* Nav links */}
         <nav className="hidden md:flex items-center gap-1 ml-6" aria-label="Main navigation">
-          {['Orders', 'Customers', 'Settings'].map((link, i) => (
-            <a
-              key={link}
-              href="#"
+          {NAV_LINKS.map((link) => (
+            <button
+              key={link.page}
+              onClick={() => onNavigate(link.page)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                i === 0
+                page === link.page
                   ? 'text-[#22c55e] bg-[#22c55e]/10'
                   : 'text-[#8a8f9a] hover:text-[#e8e8e8] hover:bg-[#22262e]'
               }`}
-              aria-current={i === 0 ? 'page' : undefined}
+              aria-current={page === link.page ? 'page' : undefined}
             >
-              {link}
-            </a>
+              {link.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Mobile nav */}
+        <nav className="flex md:hidden items-center gap-1 ml-2" aria-label="Main navigation">
+          {NAV_LINKS.map((link) => (
+            <button
+              key={link.page}
+              onClick={() => onNavigate(link.page)}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                page === link.page
+                  ? 'text-[#22c55e] bg-[#22c55e]/10'
+                  : 'text-[#8a8f9a] hover:text-[#e8e8e8] hover:bg-[#22262e]'
+              }`}
+            >
+              {link.label}
+            </button>
           ))}
         </nav>
 
