@@ -2,16 +2,21 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Nav } from '@/sections/Nav';
 import { Stats } from '@/sections/Stats';
 import { OrdersTable } from '@/sections/OrdersTable';
+import { CustomersPage } from '@/sections/CustomersPage';
+import { ArchivePage } from '@/sections/ArchivePage';
 import { AddOrderModal } from '@/components/AddOrderModal';
 import { OrderDetailModal } from '@/components/OrderDetailModal';
 import type { Order, OrderStatus } from '@/types/order';
 import * as api from '@/api/orders';
+
+export type Page = 'orders' | 'customers' | 'archive';
 
 export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [page, setPage] = useState<Page>('orders');
 
   useEffect(() => {
     api.fetchOrders().then((data) => {
@@ -39,10 +44,14 @@ export default function App() {
     setOrders((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
+  // Active orders exclude collected
+  const activeOrders = orders.filter((o) => o.status !== 'Collected');
+  const archivedOrders = orders.filter((o) => o.status === 'Collected');
+
   if (loading) {
     return (
       <>
-        <Nav onNewOrder={() => setAddOpen(true)} />
+        <Nav page={page} onNavigate={setPage} onNewOrder={() => setAddOpen(true)} />
         <main className="max-w-[1340px] mx-auto px-4 md:px-6 py-6">
           <div className="flex items-center justify-center py-20">
             <div className="w-6 h-6 border-2 border-[#22c55e] border-t-transparent rounded-full animate-spin" />
@@ -55,10 +64,20 @@ export default function App() {
 
   return (
     <>
-      <Nav onNewOrder={() => setAddOpen(true)} />
+      <Nav page={page} onNavigate={setPage} onNewOrder={() => setAddOpen(true)} />
       <main className="max-w-[1340px] mx-auto px-4 md:px-6 py-6 space-y-6">
-        <Stats orders={orders} />
-        <OrdersTable orders={orders} onSelectOrder={setSelectedOrder} />
+        {page === 'orders' && (
+          <>
+            <Stats orders={activeOrders} />
+            <OrdersTable orders={activeOrders} onSelectOrder={setSelectedOrder} />
+          </>
+        )}
+        {page === 'customers' && (
+          <CustomersPage orders={orders} onSelectOrder={(o) => { setSelectedOrder(o); }} />
+        )}
+        {page === 'archive' && (
+          <ArchivePage orders={archivedOrders} onSelectOrder={setSelectedOrder} />
+        )}
       </main>
 
       <AddOrderModal
