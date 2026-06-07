@@ -18,7 +18,7 @@ export async function fetchOrders(): Promise<Order[]> {
     headers: { 'x-auth-token': getToken() },
   });
   if (res.status === 401) {
-    localStorage.removeItem('pw_token');
+    sessionStorage.removeItem('pw_token');
     window.location.href = '/login.html';
     return [];
   }
@@ -42,7 +42,7 @@ export async function createOrder(data: {
     body: JSON.stringify(data),
   });
   if (res.status === 401) {
-    localStorage.removeItem('pw_token');
+    sessionStorage.removeItem('pw_token');
     window.location.href = '/login.html';
     throw new Error('Unauthorised');
   }
@@ -58,7 +58,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     body: JSON.stringify({ status }),
   });
   if (res.status === 401) {
-    localStorage.removeItem('pw_token');
+    sessionStorage.removeItem('pw_token');
     window.location.href = '/login.html';
     throw new Error('Unauthorised');
   }
@@ -73,7 +73,7 @@ export async function deleteOrder(id: string): Promise<void> {
     headers: { 'x-auth-token': getToken() },
   });
   if (res.status === 401) {
-    localStorage.removeItem('pw_token');
+    sessionStorage.removeItem('pw_token');
     window.location.href = '/login.html';
     return;
   }
@@ -82,7 +82,7 @@ export async function deleteOrder(id: string): Promise<void> {
 
 export function logout() {
   const token = getToken();
-  localStorage.removeItem('pw_token');
+  sessionStorage.removeItem('pw_token');
   fetch(`${API_BASE}/logout`, {
     method: 'POST',
     headers: { 'x-auth-token': token },
