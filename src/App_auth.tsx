@@ -17,6 +17,13 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [page, setPage] = useState<Page>('orders');
 
+  // Redirect to login if no token
+  useEffect(() => {
+    if (!localStorage.getItem('pw_token')) {
+      window.location.href = '/login.html';
+    }
+  }, []);
+
   useEffect(() => {
     api.fetchOrders().then((data) => {
       setOrders(data);
@@ -59,15 +66,27 @@ export default function App() {
           </div>
           <span className="text-sm font-bold text-[#e8e8e8] tracking-tight">PRINTWORKS</span>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-[#22c55e] hover:bg-[#16a34a] active:scale-95 text-black text-sm font-bold rounded-xl transition-all"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          New Order
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#22c55e] hover:bg-[#16a34a] active:scale-95 text-black text-sm font-bold rounded-xl transition-all"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            New Order
+          </button>
+          <button
+            onClick={() => api.logout()}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-[#4a4f5a] hover:text-[#e8e8e8] hover:bg-[#1e2228] transition-colors"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Page content */}
@@ -86,7 +105,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom nav */}
       <BottomNav page={page} onNavigate={setPage} activeCount={activeOrders.filter(o => o.status === 'Pending').length} />
 
       <AddOrderModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
