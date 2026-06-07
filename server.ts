@@ -128,6 +128,11 @@ app.get('/order', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'order.html'));
 });
 
+// Public order form
+app.get('/order', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'order.html'));
+});
+
 // SPA fallback
 app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
