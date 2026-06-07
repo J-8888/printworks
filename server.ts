@@ -3,11 +3,16 @@ import cors from 'cors';
 import pg from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Active sessions: token -> expiry timestamp
+const sessions = new Map<string, number>();
+const SESSION_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 // Database setup
 const pool = new Pool({
@@ -29,36 +34,50 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-
-  // Seed if empty
-  const { rows } = await pool.query('SELECT COUNT(*) as c FROM orders');
-  if (parseInt(rows[0].c, 10) === 0) {
-    const seeds = [
-      ['ORD-2025-0129', 'James Walker',    'Spur Gear 32T',      18.40, 'Pending',          '2025-06-04T10:42:00Z'],
-      ['ORD-2025-0128', 'Laura Chapman',   'Camera Mount',       24.99, 'Printing',          '2025-06-04T09:15:00Z'],
-      ['ORD-2025-0127', 'Michael Reeves',  'D&D Castle Tower',   34.00, 'Payment Required',  '2025-06-03T16:33:00Z'],
-      ['ORD-2025-0126', 'Sarah Bennett',   'Geometric Planter',  16.50, 'Collected',         '2025-06-03T14:08:00Z'],
-      ['ORD-2025-0125', 'Daniel Turner',   'Door Hinge',         22.80, 'Pending',           '2025-06-03T11:27:00Z'],
-    ];
-    for (const s of seeds) {
-      await pool.query(
-        'INSERT INTO orders (order_number, customer, item, total_gbp, status, created_at) VALUES ($1,$2,$3,$4,$5,$6)',
-        s
-      );
-    }
-  }
 }
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend in production
+// Auth middleware for protected routes
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.headers['x-auth-token'] as string;
+  if (!token) return res.status(401).json({ error: 'Unauthorised' });
+  const expiry = sessions.get(token);
+  if (!expiry || Date.now() > expiry) {
+    sessions.delete(token);
+    return res.status(401).json({ error: 'Session expired' });
+  }
+  next();
+}
+
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  const validUser = process.env.ADMIN_USERNAME || 'admin';
+  const validPass = process.env.ADMIN_PASSWORD || 'printworks';
+  if (username === validUser && password === validPass) {
+    const token = crypto.randomBytes(32).toString('hex');
+    sessions.set(token, Date.now() + SESSION_TTL);
+    return res.json({ token });
+  }
+  res.status(401).json({ error: 'Invalid username or password' });
+});
+
+// Logout
+app.post('/api/logout', (req, res) => {
+  const token = req.headers['x-auth-token'] as string;
+  if (token) sessions.delete(token);
+  res.json({ success: true });
+});
+
+// Serve static frontend
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-// API Routes
-app.get('/api/orders', async (_req, res) => {
+// Protected API Routes
+app.get('/api/orders', requireAuth, async (_req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
     res.json(rows.map(mapOrder));
@@ -70,7 +89,7 @@ app.get('/api/orders', async (_req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   const { customer, item, totalGbp, status } = req.body;
- if (!customer || !item || totalGbp === undefined || totalGbp === null) {
+  if (!customer || !item || totalGbp === undefined || totalGbp === null) {
     return res.status(400).json({ error: 'customer, item, and totalGbp are required' });
   }
   try {
@@ -92,7 +111,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.patch('/api/orders/:id', async (req, res) => {
+app.patch('/api/orders/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   if (!status) return res.status(400).json({ error: 'status is required' });
@@ -111,7 +130,7 @@ app.patch('/api/orders/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/orders/:id', async (req, res) => {
+app.delete('/api/orders/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
     const { rowCount } = await pool.query('DELETE FROM orders WHERE id = $1', [id]);
@@ -121,11 +140,6 @@ app.delete('/api/orders/:id', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete order' });
   }
-});
-
-// Public order form
-app.get('/order', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'order.html'));
 });
 
 // Public order form
@@ -150,7 +164,6 @@ function mapOrder(row: any) {
   };
 }
 
-// Start
 initDb()
   .then(() => {
     app.listen(PORT, () => console.log(`PrintWorks API running on port ${PORT}`));
