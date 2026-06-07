@@ -70,7 +70,7 @@ app.get('/api/orders', async (_req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   const { customer, item, totalGbp, status } = req.body;
-  if (!customer || !item || !totalGbp) {
+ if (!customer || !item || totalGbp === undefined || totalGbp === null) { {
     return res.status(400).json({ error: 'customer, item, and totalGbp are required' });
   }
   try {
