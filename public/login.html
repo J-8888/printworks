@@ -181,7 +181,7 @@
 
   <script>
     // If already logged in, redirect
-    if (localStorage.getItem('pw_token')) {
+   if (sessionStorage.getItem('pw_token')) {
       window.location.href = '/';
     }
 
@@ -213,7 +213,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          localStorage.setItem('pw_token', data.token);
+          sessionStorage.setItem('pw_token', data.token);
           window.location.href = '/';
         } else {
           errEl.textContent = 'Invalid username or password';
