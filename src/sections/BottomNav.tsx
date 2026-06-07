@@ -33,7 +33,7 @@ export function BottomNav({ page, onNavigate, activeCount }: BottomNavProps) {
     },
     {
       page: 'archive',
-      label: 'Archive',
+      label: 'Completed',
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="3" y="4" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.6"/>
