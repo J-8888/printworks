@@ -29,6 +29,24 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  // Seed if empty
+  const { rows } = await pool.query('SELECT COUNT(*) as c FROM orders');
+  if (parseInt(rows[0].c, 10) === 0) {
+    const seeds = [
+      ['ORD-2025-0129', 'James Walker',    'Spur Gear 32T',      18.40, 'Pending',          '2025-06-04T10:42:00Z'],
+      ['ORD-2025-0128', 'Laura Chapman',   'Camera Mount',       24.99, 'Printing',          '2025-06-04T09:15:00Z'],
+      ['ORD-2025-0127', 'Michael Reeves',  'D&D Castle Tower',   34.00, 'Payment Required',  '2025-06-03T16:33:00Z'],
+      ['ORD-2025-0126', 'Sarah Bennett',   'Geometric Planter',  16.50, 'Collected',         '2025-06-03T14:08:00Z'],
+      ['ORD-2025-0125', 'Daniel Turner',   'Door Hinge',         22.80, 'Pending',           '2025-06-03T11:27:00Z'],
+    ];
+    for (const s of seeds) {
+      await pool.query(
+        'INSERT INTO orders (order_number, customer, item, total_gbp, status, created_at) VALUES ($1,$2,$3,$4,$5,$6)',
+        s
+      );
+    }
+  }
 }
 
 // Middleware
@@ -103,6 +121,11 @@ app.delete('/api/orders/:id', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete order' });
   }
+});
+
+// Public order form
+app.get('/order', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'order.html'));
 });
 
 // SPA fallback
