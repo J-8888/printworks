@@ -24,13 +24,17 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    api.fetchOrders().then((data) => {
-      setOrders(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+ useEffect(() => {
+    if (!sessionStorage.getItem('pw_token')) {
+      sessionStorage.removeItem('pw_token');
+      window.location.href = '/login.html';
+    }
+    // Clear token on page unload so refresh forces re-login
+    const clear = () => sessionStorage.removeItem('pw_token');
+    window.addEventListener('beforeunload', clear);
+    return () => window.removeEventListener('beforeunload', clear);
   }, []);
-
+  
   const handleAdd = useCallback(
     async (data: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => {
       const order = await api.createOrder(data);
