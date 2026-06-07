@@ -2,26 +2,29 @@ import type { Order, OrderStatus } from '@/types/order';
 
 const API_BASE = '/api';
 
-function getToken() {
-  return sessionStorage.getItem('pw_token') || '';
+// Token lives only in memory — clears on every refresh
+let _token = '';
+
+export function setToken(token: string) {
+  _token = token;
+}
+
+export function getToken() {
+  return _token;
 }
 
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
-    'x-auth-token': getToken(),
+    'x-auth-token': _token,
   };
 }
 
 export async function fetchOrders(): Promise<Order[]> {
   const res = await fetch(`${API_BASE}/orders`, {
-    headers: { 'x-auth-token': getToken() },
+    headers: { 'x-auth-token': _token },
   });
-  if (res.status === 401) {
-    sessionStorage.removeItem('pw_token');
-    window.location.href = '/login.html';
-    return [];
-  }
+  if (res.status === 401) return [];
   if (!res.ok) throw new Error('Failed to fetch orders');
   const data = await res.json();
   return data.map((o: any) => ({
@@ -41,11 +44,6 @@ export async function createOrder(data: {
     headers: authHeaders(),
     body: JSON.stringify(data),
   });
-  if (res.status === 401) {
-    sessionStorage.removeItem('pw_token');
-    window.location.href = '/login.html';
-    throw new Error('Unauthorised');
-  }
   if (!res.ok) throw new Error('Failed to create order');
   const o = await res.json();
   return { ...o, createdAt: new Date(o.createdAt) };
@@ -57,11 +55,6 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
     headers: authHeaders(),
     body: JSON.stringify({ status }),
   });
-  if (res.status === 401) {
-    sessionStorage.removeItem('pw_token');
-    window.location.href = '/login.html';
-    throw new Error('Unauthorised');
-  }
   if (!res.ok) throw new Error('Failed to update order');
   const o = await res.json();
   return { ...o, createdAt: new Date(o.createdAt) };
@@ -70,19 +63,14 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
 export async function deleteOrder(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/orders/${id}`, {
     method: 'DELETE',
-    headers: { 'x-auth-token': getToken() },
+    headers: { 'x-auth-token': _token },
   });
-  if (res.status === 401) {
-    sessionStorage.removeItem('pw_token');
-    window.location.href = '/login.html';
-    return;
-  }
   if (!res.ok) throw new Error('Failed to delete order');
 }
 
 export function logout() {
-  const token = getToken();
-  sessionStorage.removeItem('pw_token');
+  const token = _token;
+  _token = '';
   fetch(`${API_BASE}/logout`, {
     method: 'POST',
     headers: { 'x-auth-token': token },
