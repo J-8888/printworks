@@ -89,5 +89,4 @@ export function logout() {
   }).finally(() => {
     window.location.href = '/login.html';
   });
-}ete order');
 }
