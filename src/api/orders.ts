@@ -3,7 +3,7 @@ import type { Order, OrderStatus } from '@/types/order';
 const API_BASE = '/api';
 
 function getToken() {
-  return localStorage.getItem('pw_token') || '';
+  return sessionStorage.getItem('pw_token') || '';
 }
 
 function authHeaders() {
