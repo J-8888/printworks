@@ -10,11 +10,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Active sessions: token -> expiry timestamp
 const sessions = new Map<string, number>();
-const SESSION_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
+const SESSION_TTL = 1000 * 60 * 60 * 24 * 7;
 
-// Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL?.includes('localhost')
@@ -31,16 +29,18 @@ async function initDb() {
       item TEXT NOT NULL,
       total_gbp REAL NOT NULL,
       status TEXT NOT NULL DEFAULT 'Pending',
+      notes TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`);
 }
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Auth middleware for protected routes
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.headers['x-auth-token'] as string;
   if (!token) return res.status(401).json({ error: 'Unauthorised' });
@@ -52,7 +52,6 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
   next();
 }
 
-// Login endpoint
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   const validUser = process.env.ADMIN_USERNAME || 'admin';
@@ -65,18 +64,15 @@ app.post('/api/login', (req, res) => {
   res.status(401).json({ error: 'Invalid username or password' });
 });
 
-// Logout
 app.post('/api/logout', (req, res) => {
   const token = req.headers['x-auth-token'] as string;
   if (token) sessions.delete(token);
   res.json({ success: true });
 });
 
-// Serve static frontend
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-// Protected API Routes
 app.get('/api/orders', requireAuth, async (_req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
@@ -88,7 +84,7 @@ app.get('/api/orders', requireAuth, async (_req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-  const { customer, item, totalGbp, status } = req.body;
+  const { customer, item, totalGbp, status, notes, phone } = req.body;
   if (!customer || !item || totalGbp === undefined || totalGbp === null) {
     return res.status(400).json({ error: 'customer, item, and totalGbp are required' });
   }
@@ -101,8 +97,8 @@ app.post('/api/orders', async (req, res) => {
     }
     const orderNumber = `ORD-2025-${String(nextNum).padStart(4, '0')}`;
     const { rows } = await pool.query(
-      'INSERT INTO orders (order_number, customer, item, total_gbp, status, created_at) VALUES ($1,$2,$3,$4,$5,NOW()) RETURNING *',
-      [orderNumber, customer, item, totalGbp, status || 'Pending']
+      'INSERT INTO orders (order_number, customer, item, total_gbp, status, notes, phone, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *',
+      [orderNumber, customer, item, totalGbp, status || 'Pending', notes || '', phone || '']
     );
     res.status(201).json(mapOrder(rows[0]));
   } catch (err) {
@@ -113,14 +109,27 @@ app.post('/api/orders', async (req, res) => {
 
 app.patch('/api/orders/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
-  if (!status) return res.status(400).json({ error: 'status is required' });
-  const valid = ['Pending', 'Printing', 'Payment Required', 'Collected'];
-  if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const { status, notes, totalGbp, phone } = req.body;
+  const updates: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+
+  if (status !== undefined) {
+    const valid = ['Pending', 'Printing', 'Payment Required', 'Collected'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    updates.push(`status = $${idx++}`); values.push(status);
+  }
+  if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(notes); }
+  if (totalGbp !== undefined) { updates.push(`total_gbp = $${idx++}`); values.push(totalGbp); }
+  if (phone !== undefined) { updates.push(`phone = $${idx++}`); values.push(phone); }
+
+  if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+
+  values.push(id);
   try {
     const { rows } = await pool.query(
-      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
-      [status, id]
+      `UPDATE orders SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Order not found' });
     res.json(mapOrder(rows[0]));
@@ -142,12 +151,10 @@ app.delete('/api/orders/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Public order form
 app.get('/order', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'order.html'));
 });
 
-// SPA fallback
 app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
@@ -160,6 +167,8 @@ function mapOrder(row: any) {
     item: row.item,
     totalGbp: row.total_gbp,
     status: row.status,
+    notes: row.notes || '',
+    phone: row.phone || '',
     createdAt: row.created_at,
   };
 }
@@ -171,4 +180,5 @@ initDb()
   .catch((err) => {
     console.error('Failed to initialise database:', err);
     process.exit(1);
+  });
   });
