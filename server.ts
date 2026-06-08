@@ -180,5 +180,4 @@ initDb()
   .catch((err) => {
     console.error('Failed to initialise database:', err);
     process.exit(1);
-  });
-  });
+    });
