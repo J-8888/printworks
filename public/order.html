@@ -6,255 +6,46 @@
   <title>Place an Order — Printworks</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      min-height: 100vh;
-      background: #0e1014;
-      color: #e8e8e8;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 16px 48px;
-    }
-
-    /* Header */
-    .header {
-      width: 100%;
-      max-width: 480px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 20px 0 32px;
-    }
-
-    .logo {
-      width: 36px;
-      height: 36px;
-      background: rgba(34,197,94,0.12);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .logo-text h1 {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      color: #e8e8e8;
-      line-height: 1;
-    }
-
-    .logo-text p {
-      font-size: 10px;
-      color: #4a4f5a;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-top: 2px;
-    }
-
-    /* Card */
-    .card {
-      width: 100%;
-      max-width: 480px;
-      background: #141720;
-      border: 1px solid #1e2228;
-      border-radius: 24px;
-      padding: 28px 24px;
-    }
-
-    .card-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #e8e8e8;
-      margin-bottom: 6px;
-    }
-
-    .card-sub {
-      font-size: 13px;
-      color: #4a4f5a;
-      margin-bottom: 28px;
-      line-height: 1.5;
-    }
-
-    /* Form fields */
-    .field {
-      margin-bottom: 20px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      color: #8a8f9a;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
-    }
-
-    .field input,
-    .field textarea {
-      width: 100%;
-      background: #0e1014;
-      border: 1.5px solid #1e2228;
-      border-radius: 14px;
-      padding: 14px 16px;
-      font-size: 15px;
-      color: #e8e8e8;
-      outline: none;
-      transition: border-color 0.15s;
-      font-family: inherit;
-      resize: none;
-      -webkit-appearance: none;
-    }
-
-    .field input::placeholder,
-    .field textarea::placeholder {
-      color: #2e333d;
-    }
-
-    .field input:focus,
-    .field textarea:focus {
-      border-color: #22c55e;
-    }
-
-    .field input.error,
-    .field textarea.error {
-      border-color: #ef4444;
-    }
-
-    .field-error {
-      font-size: 12px;
-      color: #f87171;
-      margin-top: 6px;
-    }
-
-    /* Submit button */
-    .btn {
-      width: 100%;
-      background: #22c55e;
-      color: #000;
-      font-size: 15px;
-      font-weight: 800;
-      border: none;
-      border-radius: 14px;
-      padding: 16px;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      margin-top: 8px;
-      letter-spacing: 0.02em;
-    }
-
+    body { min-height: 100vh; background: #0e1014; color: #e8e8e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 0 16px 48px; }
+    .header { width: 100%; max-width: 480px; display: flex; align-items: center; gap: 10px; padding: 20px 0 32px; }
+    .logo { width: 36px; height: 36px; background: rgba(34,197,94,0.12); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-text h1 { font-size: 14px; font-weight: 800; letter-spacing: 0.05em; color: #e8e8e8; line-height: 1; }
+    .logo-text p { font-size: 10px; color: #4a4f5a; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+    .card { width: 100%; max-width: 480px; background: #141720; border: 1px solid #1e2228; border-radius: 24px; padding: 28px 24px; }
+    .card-title { font-size: 20px; font-weight: 700; color: #e8e8e8; margin-bottom: 6px; }
+    .card-sub { font-size: 13px; color: #4a4f5a; margin-bottom: 28px; line-height: 1.5; }
+    .field { margin-bottom: 20px; }
+    .field label { display: block; font-size: 11px; font-weight: 700; color: #8a8f9a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+    .field-hint { font-size: 11px; color: #3a3f4a; margin-top: -4px; margin-bottom: 8px; }
+    .field input, .field textarea { width: 100%; background: #0e1014; border: 1.5px solid #1e2228; border-radius: 14px; padding: 14px 16px; font-size: 15px; color: #e8e8e8; outline: none; transition: border-color 0.15s; font-family: inherit; resize: none; -webkit-appearance: none; }
+    .field input::placeholder, .field textarea::placeholder { color: #2e333d; }
+    .field input:focus, .field textarea:focus { border-color: #22c55e; }
+    .field input.error, .field textarea.error { border-color: #ef4444; }
+    .price-wrap { position: relative; }
+    .price-wrap span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a8f9a; font-size: 15px; font-weight: 600; pointer-events: none; }
+    .price-wrap input { padding-left: 28px; }
+    .field-error { font-size: 12px; color: #f87171; margin-top: 6px; }
+    .btn { width: 100%; background: #22c55e; color: #000; font-size: 15px; font-weight: 800; border: none; border-radius: 14px; padding: 16px; cursor: pointer; transition: background 0.15s, transform 0.1s; margin-top: 8px; }
     .btn:active { transform: scale(0.98); }
     .btn:hover { background: #16a34a; }
     .btn:disabled { background: #1e2228; color: #4a4f5a; cursor: not-allowed; transform: none; }
-
-    .btn-spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(0,0,0,0.3);
-      border-top-color: #000;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-
+    .btn-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Success screen */
-    .success {
-      width: 100%;
-      max-width: 480px;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding-top: 16px;
-    }
-
+    .success { width: 100%; max-width: 480px; display: none; flex-direction: column; align-items: center; text-align: center; padding-top: 16px; }
     .success.visible { display: flex; }
     .card.hidden { display: none; }
-
-    .success-icon {
-      width: 72px;
-      height: 72px;
-      background: rgba(34,197,94,0.12);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .success h2 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #e8e8e8;
-      margin-bottom: 10px;
-    }
-
-    .success p {
-      font-size: 14px;
-      color: #4a4f5a;
-      line-height: 1.6;
-      max-width: 320px;
-    }
-
-    .success-order {
-      margin-top: 28px;
-      background: #141720;
-      border: 1px solid #1e2228;
-      border-radius: 20px;
-      padding: 20px 24px;
-      width: 100%;
-      text-align: left;
-    }
-
-    .success-order-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: #4a4f5a;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 4px;
-    }
-
-    .success-order-num {
-      font-size: 18px;
-      font-weight: 700;
-      font-family: monospace;
-      color: #22c55e;
-    }
-
-    .success-order-detail {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #8a8f9a;
-    }
-
-    .btn-another {
-      margin-top: 20px;
-      background: transparent;
-      border: 1.5px solid #1e2228;
-      color: #8a8f9a;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 14px;
-      padding: 14px 24px;
-      cursor: pointer;
-      width: 100%;
-      transition: border-color 0.15s, color 0.15s;
-    }
-
+    .success-icon { width: 72px; height: 72px; background: rgba(34,197,94,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+    .success h2 { font-size: 22px; font-weight: 700; color: #e8e8e8; margin-bottom: 10px; }
+    .success p { font-size: 14px; color: #4a4f5a; line-height: 1.6; max-width: 320px; }
+    .success-order { margin-top: 28px; background: #141720; border: 1px solid #1e2228; border-radius: 20px; padding: 20px 24px; width: 100%; text-align: left; }
+    .success-order-label { font-size: 10px; font-weight: 700; color: #4a4f5a; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+    .success-order-num { font-size: 18px; font-weight: 700; font-family: monospace; color: #22c55e; }
+    .success-order-detail { margin-top: 12px; font-size: 13px; color: #8a8f9a; }
+    .btn-another { margin-top: 20px; background: transparent; border: 1.5px solid #1e2228; color: #8a8f9a; font-size: 14px; font-weight: 600; border-radius: 14px; padding: 14px 24px; cursor: pointer; width: 100%; transition: border-color 0.15s, color 0.15s; }
     .btn-another:hover { border-color: #2e333d; color: #e8e8e8; }
   </style>
 </head>
 <body>
-
   <div class="header">
     <div class="logo">
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
@@ -268,10 +59,9 @@
     </div>
   </div>
 
-  <!-- Order form -->
   <div class="card" id="form-card">
     <p class="card-title">Place an Order</p>
-    <p class="card-sub">Fill in your details below and we'll get started on your print as soon as possible.</p>
+    <p class="card-sub">Fill in your details and we will get started on your print as soon as possible.</p>
 
     <div class="field">
       <label for="name">Your Name</label>
@@ -280,15 +70,30 @@
     </div>
 
     <div class="field">
+      <label for="phone">WhatsApp Number</label>
+      <p class="field-hint">So we can message you when your order is ready</p>
+      <input type="tel" id="phone" placeholder="e.g. 07700 900123" autocomplete="tel" />
+      <p class="field-error" id="phone-error"></p>
+    </div>
+
+    <div class="field">
       <label for="item">What would you like printed?</label>
       <textarea id="item" rows="4" placeholder="Describe your item, any dimensions, colour preferences, or special requirements..."></textarea>
       <p class="field-error" id="item-error"></p>
     </div>
 
+    <div class="field">
+      <label for="budget">Budget / Price Estimate (optional)</label>
+      <p class="field-hint">Leave blank if unsure — we can discuss pricing separately</p>
+      <div class="price-wrap">
+        <span>£</span>
+        <input type="number" id="budget" min="0" step="0.01" placeholder="0.00" />
+      </div>
+    </div>
+
     <button class="btn" id="submit-btn" onclick="submitOrder()">Submit Order</button>
   </div>
 
-  <!-- Success screen -->
   <div class="success" id="success-screen">
     <div class="success-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -296,84 +101,73 @@
       </svg>
     </div>
     <h2>Order Received!</h2>
-    <p>Thanks for your order. We'll be in touch once your print is ready to collect.</p>
-
+    <p>Thanks for your order. We will WhatsApp you when your print is ready to collect.</p>
     <div class="success-order">
       <p class="success-order-label">Order Number</p>
-      <p class="success-order-num" id="success-order-num">—</p>
+      <p class="success-order-num" id="success-order-num">-</p>
       <p class="success-order-detail" id="success-order-detail"></p>
     </div>
-
     <button class="btn-another" onclick="placeAnother()">Place Another Order</button>
   </div>
 
   <script>
     async function submitOrder() {
-      const nameEl = document.getElementById('name');
-      const itemEl = document.getElementById('item');
-      const nameErr = document.getElementById('name-error');
-      const itemErr = document.getElementById('item-error');
-      const btn = document.getElementById('submit-btn');
+      var nameEl = document.getElementById('name');
+      var phoneEl = document.getElementById('phone');
+      var itemEl = document.getElementById('item');
+      var budgetEl = document.getElementById('budget');
+      var nameErr = document.getElementById('name-error');
+      var phoneErr = document.getElementById('phone-error');
+      var itemErr = document.getElementById('item-error');
+      var btn = document.getElementById('submit-btn');
 
-      // Clear errors
-      nameErr.textContent = '';
-      itemErr.textContent = '';
-      nameEl.classList.remove('error');
-      itemEl.classList.remove('error');
+      nameErr.textContent = ''; phoneErr.textContent = ''; itemErr.textContent = '';
+      nameEl.classList.remove('error'); phoneEl.classList.remove('error'); itemEl.classList.remove('error');
 
-      const name = nameEl.value.trim();
-      const item = itemEl.value.trim();
-      let valid = true;
+      var name = nameEl.value.trim();
+      var phone = phoneEl.value.trim();
+      var item = itemEl.value.trim();
+      var budgetVal = budgetEl.value.trim();
+      var totalGbp = budgetVal ? parseFloat(budgetVal) : 0;
+      var valid = true;
 
-      if (!name) {
-        nameErr.textContent = 'Please enter your name';
-        nameEl.classList.add('error');
-        valid = false;
-      }
-      if (!item) {
-        itemErr.textContent = 'Please describe what you would like printed';
-        itemEl.classList.add('error');
-        valid = false;
-      }
-
+      if (!name) { nameErr.textContent = 'Please enter your name'; nameEl.classList.add('error'); valid = false; }
+      if (!phone) { phoneErr.textContent = 'Please enter your WhatsApp number'; phoneEl.classList.add('error'); valid = false; }
+      if (!item) { itemErr.textContent = 'Please describe what you would like printed'; itemEl.classList.add('error'); valid = false; }
       if (!valid) return;
 
       btn.disabled = true;
       btn.innerHTML = '<span class="btn-spinner"></span> Submitting...';
 
       try {
-        const res = await fetch('/api/orders', {
+        var res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer: name, item, totalGbp: 0, status: 'Pending' }),
+          body: JSON.stringify({ customer: name, item: item, totalGbp: totalGbp, status: 'Pending', phone: phone }),
         });
-
         if (!res.ok) throw new Error('Failed');
-
-        const order = await res.json();
-
-        // Show success
+        var order = await res.json();
         document.getElementById('form-card').classList.add('hidden');
         document.getElementById('success-order-num').textContent = order.orderNumber;
-        document.getElementById('success-order-detail').textContent = name + ' · ' + item.slice(0, 60) + (item.length > 60 ? '…' : '');
+        document.getElementById('success-order-detail').textContent = name + ' - ' + item.slice(0, 60) + (item.length > 60 ? '...' : '');
         document.getElementById('success-screen').classList.add('visible');
-
-      } catch {
+      } catch(e) {
         btn.disabled = false;
         btn.textContent = 'Submit Order';
-        nameErr.textContent = 'Something went wrong — please try again.';
+        nameErr.textContent = 'Something went wrong, please try again.';
       }
     }
 
     function placeAnother() {
       document.getElementById('name').value = '';
+      document.getElementById('phone').value = '';
       document.getElementById('item').value = '';
+      document.getElementById('budget').value = '';
       document.getElementById('form-card').classList.remove('hidden');
       document.getElementById('success-screen').classList.remove('visible');
       document.getElementById('submit-btn').disabled = false;
       document.getElementById('submit-btn').textContent = 'Submit Order';
     }
   </script>
-
 </body>
 </html>
