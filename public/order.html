@@ -20,7 +20,8 @@
     .field input, .field textarea { width: 100%; background: #0e1014; border: 1.5px solid #1e2228; border-radius: 14px; padding: 14px 16px; font-size: 15px; color: #e8e8e8; outline: none; transition: border-color 0.15s; font-family: inherit; resize: none; -webkit-appearance: none; }
     .field input::placeholder, .field textarea::placeholder { color: #2e333d; }
     .field input:focus, .field textarea:focus { border-color: #22c55e; }
-    .field input.error, .field textarea.error { border-color: #ef4444; }
+    .field input.error { border-color: #ef4444; }
+    .field textarea.error { border-color: #ef4444; }
     .price-wrap { position: relative; }
     .price-wrap span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a8f9a; font-size: 15px; font-weight: 600; pointer-events: none; }
     .price-wrap input { padding-left: 28px; }
@@ -61,7 +62,7 @@
 
   <div class="card" id="form-card">
     <p class="card-title">Place an Order</p>
-    <p class="card-sub">Fill in your details and we will get started on your print as soon as possible.</p>
+    <p class="card-sub">Fill in your details and we will email you when your print is ready to collect.</p>
 
     <div class="field">
       <label for="name">Your Name</label>
@@ -70,10 +71,10 @@
     </div>
 
     <div class="field">
-      <label for="phone">WhatsApp Number</label>
-      <p class="field-hint">So we can message you when your order is ready</p>
-      <input type="tel" id="phone" placeholder="e.g. 07700 900123" autocomplete="tel" />
-      <p class="field-error" id="phone-error"></p>
+      <label for="email">Email Address</label>
+      <p class="field-hint">We will send you a confirmation and notify you when your order is ready</p>
+      <input type="email" id="email" placeholder="e.g. james@school.com" autocomplete="email" />
+      <p class="field-error" id="email-error"></p>
     </div>
 
     <div class="field">
@@ -101,7 +102,7 @@
       </svg>
     </div>
     <h2>Order Received!</h2>
-    <p>Thanks for your order. We will WhatsApp you when your print is ready to collect.</p>
+    <p>Thanks! Check your email for a confirmation. We will email you again when your print is ready to collect.</p>
     <div class="success-order">
       <p class="success-order-label">Order Number</p>
       <p class="success-order-num" id="success-order-num">-</p>
@@ -113,26 +114,27 @@
   <script>
     async function submitOrder() {
       var nameEl = document.getElementById('name');
-      var phoneEl = document.getElementById('phone');
+      var emailEl = document.getElementById('email');
       var itemEl = document.getElementById('item');
       var budgetEl = document.getElementById('budget');
       var nameErr = document.getElementById('name-error');
-      var phoneErr = document.getElementById('phone-error');
+      var emailErr = document.getElementById('email-error');
       var itemErr = document.getElementById('item-error');
       var btn = document.getElementById('submit-btn');
 
-      nameErr.textContent = ''; phoneErr.textContent = ''; itemErr.textContent = '';
-      nameEl.classList.remove('error'); phoneEl.classList.remove('error'); itemEl.classList.remove('error');
+      nameErr.textContent = ''; emailErr.textContent = ''; itemErr.textContent = '';
+      nameEl.classList.remove('error'); emailEl.classList.remove('error'); itemEl.classList.remove('error');
 
       var name = nameEl.value.trim();
-      var phone = phoneEl.value.trim();
+      var email = emailEl.value.trim();
       var item = itemEl.value.trim();
       var budgetVal = budgetEl.value.trim();
       var totalGbp = budgetVal ? parseFloat(budgetVal) : 0;
       var valid = true;
 
       if (!name) { nameErr.textContent = 'Please enter your name'; nameEl.classList.add('error'); valid = false; }
-      if (!phone) { phoneErr.textContent = 'Please enter your WhatsApp number'; phoneEl.classList.add('error'); valid = false; }
+      if (!email) { emailErr.textContent = 'Please enter your email address'; emailEl.classList.add('error'); valid = false; }
+      else if (!email.includes('@')) { emailErr.textContent = 'Please enter a valid email address'; emailEl.classList.add('error'); valid = false; }
       if (!item) { itemErr.textContent = 'Please describe what you would like printed'; itemEl.classList.add('error'); valid = false; }
       if (!valid) return;
 
@@ -143,7 +145,7 @@
         var res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer: name, item: item, totalGbp: totalGbp, status: 'Pending', phone: phone }),
+          body: JSON.stringify({ customer: name, item: item, totalGbp: totalGbp, status: 'Pending', email: email }),
         });
         if (!res.ok) throw new Error('Failed');
         var order = await res.json();
@@ -160,7 +162,7 @@
 
     function placeAnother() {
       document.getElementById('name').value = '';
-      document.getElementById('phone').value = '';
+      document.getElementById('email').value = '';
       document.getElementById('item').value = '';
       document.getElementById('budget').value = '';
       document.getElementById('form-card').classList.remove('hidden');
