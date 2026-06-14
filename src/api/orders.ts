@@ -1,15 +1,11 @@
 import type { Order, OrderStatus } from '@/types/order';
 
 const API_BASE = '/api';
-
 let _token = '';
 
 export function setToken(token: string) { _token = token; }
 export function getToken() { return _token; }
-
-function authHeaders() {
-  return { 'Content-Type': 'application/json', 'x-auth-token': _token };
-}
+function authHeaders() { return { 'Content-Type': 'application/json', 'x-auth-token': _token }; }
 
 export async function fetchOrders(): Promise<Order[]> {
   const res = await fetch(`${API_BASE}/orders`, { headers: { 'x-auth-token': _token } });
@@ -20,38 +16,30 @@ export async function fetchOrders(): Promise<Order[]> {
 }
 
 export async function createOrder(data: {
-  customer: string; item: string; totalGbp: number; status: OrderStatus; phone?: string;
+  customer: string; item: string; totalGbp: number; status: OrderStatus; email?: string;
 }): Promise<Order> {
-  const res = await fetch(`${API_BASE}/orders`, {
-    method: 'POST', headers: authHeaders(), body: JSON.stringify(data),
-  });
+  const res = await fetch(`${API_BASE}/orders`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to create order');
   const o = await res.json();
   return { ...o, createdAt: new Date(o.createdAt) };
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
-  const res = await fetch(`${API_BASE}/orders/${id}`, {
-    method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }),
-  });
+  const res = await fetch(`${API_BASE}/orders/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
   if (!res.ok) throw new Error('Failed to update order');
   const o = await res.json();
   return { ...o, createdAt: new Date(o.createdAt) };
 }
 
-export async function updateOrder(id: string, data: { notes?: string; totalGbp?: number; status?: string; phone?: string }): Promise<Order> {
-  const res = await fetch(`${API_BASE}/orders/${id}`, {
-    method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data),
-  });
+export async function updateOrder(id: string, data: { notes?: string; totalGbp?: number; status?: string; email?: string }): Promise<Order> {
+  const res = await fetch(`${API_BASE}/orders/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to update order');
   const o = await res.json();
   return { ...o, createdAt: new Date(o.createdAt) };
 }
 
 export async function deleteOrder(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/orders/${id}`, {
-    method: 'DELETE', headers: { 'x-auth-token': _token },
-  });
+  const res = await fetch(`${API_BASE}/orders/${id}`, { method: 'DELETE', headers: { 'x-auth-token': _token } });
   if (!res.ok) throw new Error('Failed to delete order');
 }
 
