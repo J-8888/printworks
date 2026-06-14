@@ -20,6 +20,81 @@ const pool = new Pool({
     : { rejectUnauthorized: false },
 });
 
+// Send email via Resend
+async function sendEmail(to: string, subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !to) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from: process.env.FROM_EMAIL || 'Printworks <orders@resend.dev>',
+        to,
+        subject,
+        html,
+      }),
+    });
+  } catch (err) {
+    console.error('Email send failed:', err);
+  }
+}
+
+function orderConfirmationEmail(customer: string, orderNumber: string, item: string) {
+  return `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0e1014;color:#e8e8e8;border-radius:16px;padding:32px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
+        <div style="width:36px;height:36px;background:rgba(34,197,94,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#22c55e;font-size:18px;">⬡</span>
+        </div>
+        <div>
+          <p style="margin:0;font-size:14px;font-weight:800;letter-spacing:0.05em;color:#e8e8e8;">PRINTWORKS</p>
+          <p style="margin:0;font-size:10px;color:#4a4f5a;letter-spacing:0.1em;text-transform:uppercase;">3D Print Lab</p>
+        </div>
+      </div>
+      <h1 style="font-size:22px;font-weight:700;color:#e8e8e8;margin:0 0 8px;">Order Received!</h1>
+      <p style="color:#4a4f5a;font-size:14px;line-height:1.6;margin:0 0 24px;">Hi ${customer}, thanks for your order! We have received it and will get started soon.</p>
+      <div style="background:#141720;border:1px solid #1e2228;border-radius:16px;padding:20px;margin-bottom:24px;">
+        <p style="margin:0 0 4px;font-size:10px;color:#4a4f5a;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Order Number</p>
+        <p style="margin:0 0 16px;font-size:20px;font-weight:700;font-family:monospace;color:#22c55e;">${orderNumber}</p>
+        <p style="margin:0 0 4px;font-size:10px;color:#4a4f5a;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Item</p>
+        <p style="margin:0;font-size:14px;color:#e8e8e8;">${item}</p>
+      </div>
+      <p style="color:#4a4f5a;font-size:13px;line-height:1.6;margin:0;">We will email you again when your print is ready to collect. If you have any questions, just reply to this email.</p>
+    </div>
+  `;
+}
+
+function readyToCollectEmail(customer: string, orderNumber: string, item: string, totalGbp: number) {
+  const priceText = totalGbp > 0 ? `<p style="margin:0 0 4px;font-size:10px;color:#4a4f5a;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Total</p><p style="margin:0 0 16px;font-size:18px;font-weight:700;font-family:monospace;color:#e8e8e8;">£${totalGbp.toFixed(2)}</p>` : '';
+  return `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0e1014;color:#e8e8e8;border-radius:16px;padding:32px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
+        <div style="width:36px;height:36px;background:rgba(34,197,94,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#22c55e;font-size:18px;">⬡</span>
+        </div>
+        <div>
+          <p style="margin:0;font-size:14px;font-weight:800;letter-spacing:0.05em;color:#e8e8e8;">PRINTWORKS</p>
+          <p style="margin:0;font-size:10px;color:#4a4f5a;letter-spacing:0.1em;text-transform:uppercase;">3D Print Lab</p>
+        </div>
+      </div>
+      <h1 style="font-size:22px;font-weight:700;color:#22c55e;margin:0 0 8px;">Ready to Collect!</h1>
+      <p style="color:#4a4f5a;font-size:14px;line-height:1.6;margin:0 0 24px;">Hi ${customer}, great news — your 3D print is ready to collect! Pop in whenever suits you.</p>
+      <div style="background:#141720;border:1px solid #1e2228;border-radius:16px;padding:20px;margin-bottom:24px;">
+        <p style="margin:0 0 4px;font-size:10px;color:#4a4f5a;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Order Number</p>
+        <p style="margin:0 0 16px;font-size:20px;font-weight:700;font-family:monospace;color:#22c55e;">${orderNumber}</p>
+        <p style="margin:0 0 4px;font-size:10px;color:#4a4f5a;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;">Item</p>
+        <p style="margin:0 0 16px;font-size:14px;color:#e8e8e8;">${item}</p>
+        ${priceText}
+      </div>
+      <p style="color:#4a4f5a;font-size:13px;line-height:1.6;margin:0;">See you soon!</p>
+    </div>
+  `;
+}
+
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
@@ -30,12 +105,12 @@ async function initDb() {
       total_gbp REAL NOT NULL,
       status TEXT NOT NULL DEFAULT 'Pending',
       notes TEXT NOT NULL DEFAULT '',
-      phone TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''`);
-  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT ''`);
 }
 
 app.use(cors());
@@ -84,7 +159,7 @@ app.get('/api/orders', requireAuth, async (_req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-  const { customer, item, totalGbp, status, notes, phone } = req.body;
+  const { customer, item, totalGbp, status, notes, email } = req.body;
   if (!customer || !item || totalGbp === undefined || totalGbp === null) {
     return res.status(400).json({ error: 'customer, item, and totalGbp are required' });
   }
@@ -97,10 +172,21 @@ app.post('/api/orders', async (req, res) => {
     }
     const orderNumber = `ORD-2025-${String(nextNum).padStart(4, '0')}`;
     const { rows } = await pool.query(
-      'INSERT INTO orders (order_number, customer, item, total_gbp, status, notes, phone, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *',
-      [orderNumber, customer, item, totalGbp, status || 'Pending', notes || '', phone || '']
+      'INSERT INTO orders (order_number, customer, item, total_gbp, status, notes, email, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *',
+      [orderNumber, customer, item, totalGbp, status || 'Pending', notes || '', email || '']
     );
-    res.status(201).json(mapOrder(rows[0]));
+    const order = mapOrder(rows[0]);
+
+    // Send confirmation email automatically
+    if (email) {
+      await sendEmail(
+        email,
+        `Order Received - ${orderNumber}`,
+        orderConfirmationEmail(customer, orderNumber, item)
+      );
+    }
+
+    res.status(201).json(order);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create order' });
@@ -109,7 +195,7 @@ app.post('/api/orders', async (req, res) => {
 
 app.patch('/api/orders/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { status, notes, totalGbp, phone } = req.body;
+  const { status, notes, totalGbp, email } = req.body;
   const updates: string[] = [];
   const values: any[] = [];
   let idx = 1;
@@ -121,7 +207,7 @@ app.patch('/api/orders/:id', requireAuth, async (req, res) => {
   }
   if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(notes); }
   if (totalGbp !== undefined) { updates.push(`total_gbp = $${idx++}`); values.push(totalGbp); }
-  if (phone !== undefined) { updates.push(`phone = $${idx++}`); values.push(phone); }
+  if (email !== undefined) { updates.push(`email = $${idx++}`); values.push(email); }
 
   if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
 
@@ -132,7 +218,18 @@ app.patch('/api/orders/:id', requireAuth, async (req, res) => {
       values
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Order not found' });
-    res.json(mapOrder(rows[0]));
+    const order = mapOrder(rows[0]);
+
+    // Auto-send "ready to collect" email when status changes to Collected
+    if (status === 'Collected' && order.email) {
+      await sendEmail(
+        order.email,
+        `Ready to Collect - ${order.orderNumber}`,
+        readyToCollectEmail(order.customer, order.orderNumber, order.item, order.totalGbp)
+      );
+    }
+
+    res.json(order);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update order' });
@@ -168,7 +265,7 @@ function mapOrder(row: any) {
     totalGbp: row.total_gbp,
     status: row.status,
     notes: row.notes || '',
-    phone: row.phone || '',
+    email: row.email || '',
     createdAt: row.created_at,
   };
 }
@@ -180,4 +277,4 @@ initDb()
   .catch((err) => {
     console.error('Failed to initialise database:', err);
     process.exit(1);
-    });
+  });
