@@ -54,7 +54,7 @@ export function AddOrderModal({ open, onClose, onAdd }: AddOrderModalProps) {
       setErrors(errs);
       return;
     }
-    onAdd({ customer: customer.trim(), item: item.trim(), totalGbp: parseFloat(parseFloat(total).toFixed(2)), status, notes: '', email: '' });
+    onAdd({ customer: customer.trim(), item: item.trim(), totalGbp: parseFloat(parseFloat(total).toFixed(2)), status, notes: '', phone: '' });
     onClose();
   }
 
