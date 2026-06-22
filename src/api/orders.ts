@@ -16,7 +16,7 @@ export async function fetchOrders(): Promise<Order[]> {
 }
 
 export async function createOrder(data: {
-  customer: string; item: string; totalGbp: number; status: OrderStatus; email?: string;
+  customer: string; item: string; totalGbp: number; status: OrderStatus; phone?: string;
 }): Promise<Order> {
   const res = await fetch(`${API_BASE}/orders`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to create order');
@@ -31,7 +31,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
   return { ...o, createdAt: new Date(o.createdAt) };
 }
 
-export async function updateOrder(id: string, data: { notes?: string; totalGbp?: number; status?: string; email?: string }): Promise<Order> {
+export async function updateOrder(id: string, data: { notes?: string; totalGbp?: number; status?: string; phone?: string }): Promise<Order> {
   const res = await fetch(`${API_BASE}/orders/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to update order');
   const o = await res.json();
