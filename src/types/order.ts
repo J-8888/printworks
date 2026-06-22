@@ -8,6 +8,6 @@ export interface Order {
   totalGbp: number;
   status: OrderStatus;
   notes: string;
-  email: string;
+  phone: string;
   createdAt: Date;
 }
