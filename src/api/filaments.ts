@@ -15,7 +15,7 @@ export async function fetchFilaments(): Promise<Filament[]> {
 
 export async function createFilament(data: {
   brand: string; colour: string; colourHex: string; material: string;
-  totalWeightG: number; costPerGram: number;
+  totalWeightG: number; costPerGram: number; status: string;
 }): Promise<Filament> {
   const res = await fetch(`${API_BASE}/filaments`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to create filament');
@@ -25,7 +25,7 @@ export async function createFilament(data: {
 
 export async function updateFilament(id: string, data: Partial<{
   brand: string; colour: string; colourHex: string; material: string;
-  totalWeightG: number; remainingWeightG: number; costPerGram: number;
+  totalWeightG: number; remainingWeightG: number; costPerGram: number; status: string;
 }>): Promise<Filament> {
   const res = await fetch(`${API_BASE}/filaments/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(data) });
   if (!res.ok) throw new Error('Failed to update filament');
