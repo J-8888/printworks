@@ -1,3 +1,4 @@
+export type FilamentStatus = 'Ordered' | 'Usable' | 'Empty';
 export type FilamentMaterial = 'PLA' | 'PETG' | 'ABS' | 'TPU' | 'ASA' | 'Nylon' | 'Resin' | 'Other';
 
 export interface Filament {
@@ -9,6 +10,7 @@ export interface Filament {
   totalWeightG: number;
   remainingWeightG: number;
   costPerGram: number;
+  status: FilamentStatus;
   createdAt: Date;
 }
 
