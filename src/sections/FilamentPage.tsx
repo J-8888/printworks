@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Filament } from '@/types/filament';
+import type { Filament, FilamentStatus } from '@/types/filament';
 import * as filamentApi from '@/api/filaments';
 import { formatGbp } from '@/utils/format';
 
 const MATERIALS = ['PLA', 'PETG', 'ABS', 'TPU', 'ASA', 'Nylon', 'Resin', 'Other'];
+const FILAMENT_STATUSES: FilamentStatus[] = ['Ordered', 'Usable', 'Empty'];
 const PRESET_COLOURS = [
   { name: 'White', hex: '#f0f0f0' }, { name: 'Black', hex: '#1a1a1a' },
   { name: 'Red', hex: '#ef4444' }, { name: 'Blue', hex: '#3b82f6' },
@@ -14,10 +15,20 @@ const PRESET_COLOURS = [
   { name: 'Silver', hex: '#c0c0c0' }, { name: 'Gold', hex: '#d4af37' },
 ];
 
-function percentageColour(pct: number) {
-  if (pct > 50) return 'text-[#22c55e]';
-  if (pct > 20) return 'text-amber-400';
-  return 'text-red-400';
+const STATUS_CONFIG: Record<FilamentStatus, { label: string; bg: string; text: string; dot: string }> = {
+  Ordered:  { label: 'ORDERED',  bg: 'bg-amber-500/15',  text: 'text-amber-400',  dot: 'bg-amber-400' },
+  Usable:   { label: 'USABLE',   bg: 'bg-green-500/15',  text: 'text-green-400',  dot: 'bg-green-400' },
+  Empty:    { label: 'EMPTY',    bg: 'bg-[#2e333d]',     text: 'text-[#8a8f9a]',  dot: 'bg-[#4a4f5a]' },
+};
+
+function StatusBadge({ status }: { status: FilamentStatus }) {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Usable;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-bold tracking-wider uppercase ${cfg.bg} ${cfg.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
 }
 
 function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: () => void; onAdd: (f: Filament) => void }) {
@@ -27,11 +38,12 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
   const [material, setMaterial] = useState('PLA');
   const [weight, setWeight] = useState('');
   const [cost, setCost] = useState('');
+  const [filStatus, setFilStatus] = useState<FilamentStatus>('Usable');
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (open) { setBrand(''); setColour(''); setColourHex('#22c55e'); setMaterial('PLA'); setWeight(''); setCost(''); setErrors({}); }
+    if (open) { setBrand(''); setColour(''); setColourHex('#22c55e'); setMaterial('PLA'); setWeight(''); setCost(''); setFilStatus('Usable'); setErrors({}); }
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -47,6 +59,7 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
         brand: brand.trim(), colour: colour.trim(), colourHex,
         material, totalWeightG: parseFloat(weight),
         costPerGram: cost ? parseFloat(cost) : 0,
+        status: filStatus,
       });
       onAdd(f);
       onClose();
@@ -65,27 +78,35 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
             className="fixed bottom-0 left-0 right-0 z-50 bg-[#141720] border-t border-[#1e2228] rounded-t-3xl max-h-[90vh] flex flex-col">
             <div className="flex justify-center pt-3 pb-1 shrink-0"><div className="w-10 h-1 bg-[#2e333d] rounded-full" /></div>
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e2228] shrink-0">
-              <h2 className="text-base font-bold text-[#e8e8e8]">Add Filament</h2>
+              <h2 className="text-base font-bold text-[#e8e8e8]">Add Filament Spool</h2>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-[#4a4f5a] hover:text-[#e8e8e8] hover:bg-[#1e2228] transition-colors">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-              {/* Brand */}
+              <div>
+                <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Status</label>
+                <div className="flex gap-2">
+                  {FILAMENT_STATUSES.map(s => (
+                    <button key={s} type="button" onClick={() => setFilStatus(s)}
+                      className={`flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${filStatus === s ? `${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].text} border-current` : 'border-[#1e2228] text-[#4a4f5a] hover:text-[#e8e8e8]'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Brand</label>
                 <input value={brand} onChange={e => setBrand(e.target.value)} placeholder="e.g. Bambu Lab, Prusament"
                   className={`w-full bg-[#0e1014] border rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors ${errors.brand ? 'border-red-500' : 'border-[#1e2228]'}`} />
                 {errors.brand && <p className="text-xs text-red-400 mt-1">{errors.brand}</p>}
               </div>
-              {/* Colour */}
               <div>
-                <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Colour</label>
+                <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Colour Name</label>
                 <input value={colour} onChange={e => setColour(e.target.value)} placeholder="e.g. Matte Black, Galaxy Blue"
                   className={`w-full bg-[#0e1014] border rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors ${errors.colour ? 'border-red-500' : 'border-[#1e2228]'}`} />
                 {errors.colour && <p className="text-xs text-red-400 mt-1">{errors.colour}</p>}
               </div>
-              {/* Colour picker */}
               <div>
                 <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Colour Swatch</label>
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -101,7 +122,6 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
                     className="w-full h-10 bg-[#0e1014] border border-[#1e2228] rounded-2xl px-2 cursor-pointer" />
                 </div>
               </div>
-              {/* Material */}
               <div>
                 <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Material</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -113,14 +133,12 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
                   ))}
                 </div>
               </div>
-              {/* Weight */}
               <div>
                 <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Total Weight (g)</label>
                 <input type="number" min="1" value={weight} onChange={e => setWeight(e.target.value)} placeholder="e.g. 1000"
                   className={`w-full bg-[#0e1014] border rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors ${errors.weight ? 'border-red-500' : 'border-[#1e2228]'}`} />
                 {errors.weight && <p className="text-xs text-red-400 mt-1">{errors.weight}</p>}
               </div>
-              {/* Cost */}
               <div>
                 <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Cost per gram (£) — optional</label>
                 <div className="relative">
@@ -132,7 +150,7 @@ function AddFilamentModal({ open, onClose, onAdd }: { open: boolean; onClose: ()
               </div>
               <button type="submit" disabled={saving}
                 className="w-full bg-[#22c55e] hover:bg-[#16a34a] disabled:bg-[#1e2228] disabled:text-[#4a4f5a] text-black font-bold text-sm rounded-2xl py-4 transition-colors mb-4">
-                {saving ? 'Saving...' : 'Add Filament'}
+                {saving ? 'Saving...' : 'Add Spool'}
               </button>
             </form>
           </motion.div>
@@ -148,26 +166,28 @@ export function FilamentPage() {
   const [addOpen, setAddOpen] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      const data = await filamentApi.fetchFilaments();
-      setFilaments(data);
-    } catch {}
-    setLoading(false);
+    try { const data = await filamentApi.fetchFilaments(); setFilaments(data); }
+    catch {} setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const totalSpoolCost = filaments.reduce((s, f) => s + f.totalWeightG * f.costPerGram, 0);
-  const totalRemaining = filaments.reduce((s, f) => s + f.remainingWeightG, 0);
+  async function handleStatusChange(id: string, status: FilamentStatus) {
+    const updated = await filamentApi.updateFilament(id, { status });
+    setFilaments(prev => prev.map(f => f.id === id ? updated : f));
+  }
 
   async function handleDelete(id: string) {
     await filamentApi.deleteFilament(id);
     setFilaments(prev => prev.filter(f => f.id !== id));
   }
 
+  const usableFilaments = filaments.filter(f => f.status === 'Usable');
+  const totalRemaining = usableFilaments.reduce((s, f) => s + f.remainingWeightG, 0);
+  const totalValue = filaments.reduce((s, f) => s + f.totalWeightG * f.costPerGram, 0);
+
   return (
     <div className="px-4 pt-4">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold text-[#e8e8e8]">Filament</h1>
@@ -180,19 +200,17 @@ export function FilamentPage() {
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-2 mb-5">
         <div className="bg-[#141720] border border-[#1e2228] rounded-2xl p-4">
           <p className="text-2xl font-bold font-mono text-[#e8e8e8]">{Math.round(totalRemaining)}g</p>
-          <p className="text-xs text-[#4a4f5a] font-medium mt-0.5">Total Remaining</p>
+          <p className="text-xs text-[#4a4f5a] font-medium mt-0.5">Usable Stock</p>
         </div>
         <div className="bg-[#141720] border border-[#1e2228] rounded-2xl p-4">
-          <p className="text-2xl font-bold font-mono text-[#22c55e]">{formatGbp(totalSpoolCost)}</p>
+          <p className="text-2xl font-bold font-mono text-[#22c55e]">{formatGbp(totalValue)}</p>
           <p className="text-xs text-[#4a4f5a] font-medium mt-0.5">Total Stock Value</p>
         </div>
       </div>
 
-      {/* Filament list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-5 h-5 border-2 border-[#22c55e] border-t-transparent rounded-full animate-spin" />
@@ -212,51 +230,55 @@ export function FilamentPage() {
       ) : (
         <div className="space-y-3 pb-4">
           {filaments.map((f, i) => {
-            const pct = Math.round((f.remainingWeightG / f.totalWeightG) * 100);
-            const pctColour = percentageColour(pct);
+            const pct = f.status === 'Empty' ? 0 : Math.round((f.remainingWeightG / f.totalWeightG) * 100);
             return (
               <motion.div key={f.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.18, delay: i * 0.04 }}
                 className="bg-[#141720] border border-[#1e2228] rounded-2xl p-4">
                 <div className="flex items-start gap-3">
-                  {/* Colour swatch */}
-                  <div className="w-10 h-10 rounded-full shrink-0 border-2 border-[#1e2228]" style={{ backgroundColor: f.colourHex }} />
+                  <div className="w-10 h-10 rounded-full shrink-0 border-2 border-[#1e2228]"
+                    style={{ backgroundColor: f.status === 'Ordered' ? 'transparent' : f.colourHex, borderColor: f.colourHex }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-bold text-[#e8e8e8]">{f.brand}</p>
                         <p className="text-xs text-[#8a8f9a]">{f.colour} · {f.material}</p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={`text-sm font-bold font-mono ${pctColour}`}>{pct}%</p>
-                        <p className="text-xs text-[#4a4f5a]">{Math.round(f.remainingWeightG)}g left</p>
-                      </div>
+                      <StatusBadge status={f.status} />
                     </div>
-                    {/* Progress bar */}
-                    <div className="mt-3 h-2 bg-[#0e1014] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%`, backgroundColor: f.colourHex, opacity: 0.8 }} />
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-xs text-[#4a4f5a]">{Math.round(f.remainingWeightG)}g / {f.totalWeightG}g</p>
-                      {f.costPerGram > 0 && (
-                        <p className="text-xs text-[#4a4f5a]">{formatGbp(f.remainingWeightG * f.costPerGram)} remaining value</p>
-                      )}
-                    </div>
-                    {/* Low stock warning */}
-                    {pct <= 20 && (
-                      <div className="mt-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <p className="text-xs text-red-400 font-semibold">⚠ Low stock — consider reordering</p>
-                      </div>
+
+                    {f.status !== 'Ordered' && (
+                      <>
+                        <div className="mt-3 h-2 bg-[#0e1014] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: f.colourHex, opacity: 0.85 }} />
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <p className="text-xs text-[#4a4f5a]">{Math.round(f.remainingWeightG)}g / {f.totalWeightG}g</p>
+                          {f.costPerGram > 0 && <p className="text-xs text-[#4a4f5a]">{formatGbp(f.remainingWeightG * f.costPerGram)} left</p>}
+                        </div>
+                      </>
                     )}
+
+                    {f.status === 'Ordered' && (
+                      <p className="text-xs text-amber-400 mt-2">Arriving soon — {f.totalWeightG}g {f.material}</p>
+                    )}
+
+                    {/* Status change buttons */}
+                    <div className="flex gap-2 mt-3">
+                      {FILAMENT_STATUSES.filter(s => s !== f.status).map(s => (
+                        <button key={s} onClick={() => handleStatusChange(f.id, s)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].text} border-current/30 hover:opacity-80`}>
+                          Mark {s}
+                        </button>
+                      ))}
+                      <button onClick={() => handleDelete(f.id)}
+                        className="px-3 py-2 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v9h6V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-                {/* Delete */}
-                <button onClick={() => handleDelete(f.id)}
-                  className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v9h6V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Remove Spool
-                </button>
               </motion.div>
             );
           })}
