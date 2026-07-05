@@ -47,9 +47,11 @@ async function initDb() {
       total_weight_g REAL NOT NULL,
       remaining_weight_g REAL NOT NULL,
       cost_per_gram REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'Usable',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE filaments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Usable'`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS order_filaments (
@@ -164,13 +166,13 @@ app.get('/api/filaments', requireAuth, async (_req, res) => {
 });
 
 app.post('/api/filaments', requireAuth, async (req, res) => {
-  const { brand, colour, colourHex, material, totalWeightG, costPerGram } = req.body;
+  const { brand, colour, colourHex, material, totalWeightG, costPerGram, status } = req.body;
   if (!brand || !colour || !material || !totalWeightG)
     return res.status(400).json({ error: 'brand, colour, material, totalWeightG are required' });
   try {
     const { rows } = await pool.query(
-      'INSERT INTO filaments (brand, colour, colour_hex, material, total_weight_g, remaining_weight_g, cost_per_gram) VALUES ($1,$2,$3,$4,$5,$5,$6) RETURNING *',
-      [brand, colour, colourHex || '#22c55e', material, totalWeightG, costPerGram || 0]
+      'INSERT INTO filaments (brand, colour, colour_hex, material, total_weight_g, remaining_weight_g, cost_per_gram, status) VALUES ($1,$2,$3,$4,$5,$5,$6,$7) RETURNING *',
+      [brand, colour, colourHex || '#22c55e', material, totalWeightG, costPerGram || 0, status || 'Usable']
     );
     res.status(201).json(mapFilament(rows[0]));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to create filament' }); }
@@ -178,7 +180,7 @@ app.post('/api/filaments', requireAuth, async (req, res) => {
 
 app.patch('/api/filaments/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { brand, colour, colourHex, material, totalWeightG, remainingWeightG, costPerGram } = req.body;
+  const { brand, colour, colourHex, material, totalWeightG, remainingWeightG, costPerGram, status } = req.body;
   const updates: string[] = []; const values: any[] = []; let idx = 1;
   if (brand !== undefined) { updates.push(`brand = $${idx++}`); values.push(brand); }
   if (colour !== undefined) { updates.push(`colour = $${idx++}`); values.push(colour); }
@@ -187,6 +189,7 @@ app.patch('/api/filaments/:id', requireAuth, async (req, res) => {
   if (totalWeightG !== undefined) { updates.push(`total_weight_g = $${idx++}`); values.push(totalWeightG); }
   if (remainingWeightG !== undefined) { updates.push(`remaining_weight_g = $${idx++}`); values.push(remainingWeightG); }
   if (costPerGram !== undefined) { updates.push(`cost_per_gram = $${idx++}`); values.push(costPerGram); }
+  if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
   if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
   values.push(id);
   try {
@@ -212,18 +215,12 @@ app.get('/api/orders/:id/filaments', requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT of.id, of.grams_used, f.id as filament_id, f.brand, f.colour, f.colour_hex, f.material, f.cost_per_gram
        FROM order_filaments of JOIN filaments f ON f.id = of.filament_id
-       WHERE of.order_id = $1`,
-      [id]
+       WHERE of.order_id = $1`, [id]
     );
     res.json(rows.map(r => ({
-      id: String(r.id),
-      gramsUsed: r.grams_used,
-      filamentId: String(r.filament_id),
-      brand: r.brand,
-      colour: r.colour,
-      colourHex: r.colour_hex,
-      material: r.material,
-      costPerGram: r.cost_per_gram,
+      id: String(r.id), gramsUsed: r.grams_used,
+      filamentId: String(r.filament_id), brand: r.brand, colour: r.colour,
+      colourHex: r.colour_hex, material: r.material, costPerGram: r.cost_per_gram,
       totalCost: r.grams_used * r.cost_per_gram,
     })));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to fetch order filaments' }); }
@@ -238,7 +235,6 @@ app.post('/api/orders/:id/filaments', requireAuth, async (req, res) => {
       'INSERT INTO order_filaments (order_id, filament_id, grams_used) VALUES ($1,$2,$3)',
       [id, filamentId, gramsUsed]
     );
-    // Deduct from remaining weight
     await pool.query(
       'UPDATE filaments SET remaining_weight_g = GREATEST(0, remaining_weight_g - $1) WHERE id = $2',
       [gramsUsed, filamentId]
@@ -250,10 +246,12 @@ app.post('/api/orders/:id/filaments', requireAuth, async (req, res) => {
 app.delete('/api/orders/:orderId/filaments/:usageId', requireAuth, async (req, res) => {
   const { orderId, usageId } = req.params;
   try {
-    const { rows } = await pool.query('SELECT filament_id, grams_used FROM order_filaments WHERE id = $1 AND order_id = $2', [usageId, orderId]);
+    const { rows } = await pool.query(
+      'SELECT filament_id, grams_used FROM order_filaments WHERE id = $1 AND order_id = $2',
+      [usageId, orderId]
+    );
     if (rows.length === 0) return res.status(404).json({ error: 'Usage not found' });
     await pool.query('DELETE FROM order_filaments WHERE id = $1', [usageId]);
-    // Restore weight
     await pool.query(
       'UPDATE filaments SET remaining_weight_g = LEAST(total_weight_g, remaining_weight_g + $1) WHERE id = $2',
       [rows[0].grams_used, rows[0].filament_id]
@@ -283,7 +281,8 @@ function mapFilament(row: any) {
     id: String(row.id), brand: row.brand, colour: row.colour,
     colourHex: row.colour_hex, material: row.material,
     totalWeightG: row.total_weight_g, remainingWeightG: row.remaining_weight_g,
-    costPerGram: row.cost_per_gram, createdAt: row.created_at,
+    costPerGram: row.cost_per_gram, status: row.status || 'Usable',
+    createdAt: row.created_at,
   };
 }
 
