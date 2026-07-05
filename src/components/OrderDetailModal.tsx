@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Order, OrderStatus } from '@/types/order';
+import type { Filament, OrderFilamentUsage } from '@/types/filament';
 import { StatusBadge } from './StatusBadge';
 import { IconX, IconTrash } from '@/icons';
 import { formatGbp, formatDate, STATUS_CONFIG } from '@/utils/format';
 import * as api from '@/api/orders';
+import * as filamentApi from '@/api/filaments';
 
 interface OrderDetailModalProps {
   order: Order | null;
@@ -27,12 +29,26 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
   const [notesChanged, setNotesChanged] = useState(false);
   const [priceChanged, setPriceChanged] = useState(false);
 
+  // Filament assignment
+  const [filaments, setFilaments] = useState<Filament[]>([]);
+  const [usages, setUsages] = useState<OrderFilamentUsage[]>([]);
+  const [selectedFilamentId, setSelectedFilamentId] = useState('');
+  const [gramsUsed, setGramsUsed] = useState('');
+  const [addingFilament, setAddingFilament] = useState(false);
+  const [savingFilament, setSavingFilament] = useState(false);
+
   useEffect(() => {
     if (order) {
       setNotes(order.notes || '');
       setPrice(order.totalGbp > 0 ? order.totalGbp.toFixed(2) : '');
       setNotesChanged(false);
       setPriceChanged(false);
+      setAddingFilament(false);
+      setSelectedFilamentId('');
+      setGramsUsed('');
+      // Load filaments and usages
+      filamentApi.fetchFilaments().then(setFilaments).catch(() => {});
+      filamentApi.fetchOrderFilaments(order.id).then(setUsages).catch(() => {});
     }
   }, [order]);
 
@@ -46,8 +62,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
     if (!order || !notesChanged) return;
     setSavingNotes(true);
     await api.updateOrder(order.id, { notes });
-    setSavingNotes(false);
-    setNotesChanged(false);
+    setSavingNotes(false); setNotesChanged(false);
   }, [order, notes, notesChanged]);
 
   const savePrice = useCallback(async () => {
@@ -56,20 +71,33 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
     if (isNaN(num) || num < 0) return;
     setSavingPrice(true);
     await api.updateOrder(order.id, { totalGbp: parseFloat(num.toFixed(2)) });
-    setSavingPrice(false);
-    setPriceChanged(false);
+    setSavingPrice(false); setPriceChanged(false);
   }, [order, price, priceChanged]);
+
+  async function handleAddFilamentUsage() {
+    if (!order || !selectedFilamentId || !gramsUsed) return;
+    setSavingFilament(true);
+    await filamentApi.logFilamentUsage(order.id, selectedFilamentId, parseFloat(gramsUsed));
+    const updated = await filamentApi.fetchOrderFilaments(order.id);
+    setUsages(updated);
+    const updatedFilaments = await filamentApi.fetchFilaments();
+    setFilaments(updatedFilaments);
+    setSelectedFilamentId(''); setGramsUsed(''); setAddingFilament(false);
+    setSavingFilament(false);
+  }
+
+  async function handleRemoveUsage(usageId: string) {
+    if (!order) return;
+    await filamentApi.removeFilamentUsage(order.id, usageId);
+    setUsages(prev => prev.filter(u => u.id !== usageId));
+    const updatedFilaments = await filamentApi.fetchFilaments();
+    setFilaments(updatedFilaments);
+  }
 
   function openWhatsApp(message: string) {
     if (!order?.phone) return;
     const phone = formatPhone(order.phone);
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-  }
-
-  function sendOrderConfirmation() {
-    if (!order) return;
-    const msg = `Hi ${order.customer}! Your Printworks order has been received. Order number: ${order.orderNumber}. Item: ${order.item}. We will message you when it is ready to collect!`;
-    openWhatsApp(msg);
   }
 
   function sendReadyToCollect() {
@@ -79,23 +107,20 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
     openWhatsApp(msg);
   }
 
+  const usableFilaments = filaments.filter(f => f.status === 'Usable');
+
   return (
     <AnimatePresence>
       {order && (
         <>
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-            onClick={onClose} aria-hidden="true"
-          />
-          <motion.div
-            key="detail" role="dialog" aria-modal="true" aria-labelledby="detail-title"
+          <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            onClick={onClose} aria-hidden="true" />
+          <motion.div key="detail" role="dialog" aria-modal="true" aria-labelledby="detail-title"
             initial={{ opacity: 0, y: '100%' }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: '100%' }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[#141720] border-t border-[#1e2228] rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]"
-          >
+            className="fixed bottom-0 left-0 right-0 z-50 bg-[#141720] border-t border-[#1e2228] rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 bg-[#2e333d] rounded-full" />
             </div>
@@ -113,6 +138,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
+              {/* Order info */}
               <div className="bg-[#0e1014] rounded-2xl p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <span className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold">Item</span>
@@ -128,22 +154,103 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                 </div>
               </div>
 
+              {/* WhatsApp */}
               {order.phone && (
-                <div className="space-y-2">
-                  <p className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold">WhatsApp</p>
-                  <button onClick={sendOrderConfirmation}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-[#1e2228] text-[#8a8f9a] hover:border-[#25d366]/40 hover:text-[#25d366] text-sm font-semibold transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    Send Order Confirmation
-                  </button>
-                  <button onClick={sendReadyToCollect}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#25d366]/10 border border-[#25d366]/30 text-[#25d366] hover:bg-[#25d366]/20 text-sm font-bold transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    Send Ready to Collect
-                  </button>
-                </div>
+                <button onClick={sendReadyToCollect}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#25d366]/10 border border-[#25d366]/30 text-[#25d366] hover:bg-[#25d366]/20 text-sm font-bold transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  Send Ready to Collect
+                </button>
               )}
 
+              {/* Filament usage */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold">Filament Used</p>
+                  {!addingFilament && (
+                    <button onClick={() => setAddingFilament(true)}
+                      className="text-xs text-[#22c55e] font-semibold hover:opacity-80 transition-opacity">
+                      + Assign Filament
+                    </button>
+                  )}
+                </div>
+
+                {/* Existing usages */}
+                {usages.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {usages.map(u => (
+                      <div key={u.id} className="flex items-center gap-3 bg-[#0e1014] rounded-2xl px-4 py-3">
+                        <div className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: u.colourHex }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#e8e8e8] font-medium">{u.brand} {u.colour}</p>
+                          <p className="text-xs text-[#4a4f5a]">{u.gramsUsed}g · {u.material}{u.totalCost > 0 ? ` · ${formatGbp(u.totalCost)}` : ''}</p>
+                        </div>
+                        <button onClick={() => handleRemoveUsage(u.id)}
+                          className="text-red-400 hover:opacity-80 transition-opacity shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v9h6V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add filament form */}
+                {addingFilament && (
+                  <div className="bg-[#0e1014] rounded-2xl p-4 space-y-3">
+                    {usableFilaments.length === 0 ? (
+                      <p className="text-xs text-[#4a4f5a] text-center py-2">No usable filament spools — add some in the Filament tab</p>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Select Filament</label>
+                          <select value={selectedFilamentId} onChange={e => setSelectedFilamentId(e.target.value)}
+                            className="w-full bg-[#141720] border border-[#1e2228] rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] outline-none focus:border-[#22c55e] transition-colors">
+                            <option value="">Pick a spool...</option>
+                            {usableFilaments.map(f => (
+                              <option key={f.id} value={f.id}>
+                                {f.brand} {f.colour} ({f.material}) — {Math.round(f.remainingWeightG)}g left
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-[#8a8f9a] uppercase tracking-wider mb-2">Grams Used</label>
+                          <input type="number" min="0.1" step="0.1" value={gramsUsed} onChange={e => setGramsUsed(e.target.value)}
+                            placeholder="e.g. 45"
+                            className="w-full bg-[#141720] border border-[#1e2228] rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors" />
+                          {selectedFilamentId && gramsUsed && filaments.find(f => f.id === selectedFilamentId)?.costPerGram ? (
+                            <p className="text-xs text-[#4a4f5a] mt-1">
+                              Estimated cost: {formatGbp(parseFloat(gramsUsed) * (filaments.find(f => f.id === selectedFilamentId)?.costPerGram || 0))}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => { setAddingFilament(false); setSelectedFilamentId(''); setGramsUsed(''); }}
+                            className="flex-1 py-2.5 rounded-2xl border border-[#1e2228] text-[#4a4f5a] text-sm font-medium transition-colors hover:text-[#e8e8e8]">
+                            Cancel
+                          </button>
+                          <button onClick={handleAddFilamentUsage} disabled={!selectedFilamentId || !gramsUsed || savingFilament}
+                            className="flex-1 py-2.5 rounded-2xl bg-[#22c55e] hover:bg-[#16a34a] disabled:bg-[#1e2228] disabled:text-[#4a4f5a] text-black text-sm font-bold transition-colors">
+                            {savingFilament ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    {usableFilaments.length === 0 && (
+                      <button onClick={() => setAddingFilament(false)}
+                        className="w-full py-2 rounded-2xl border border-[#1e2228] text-[#4a4f5a] text-sm transition-colors hover:text-[#e8e8e8]">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {usages.length === 0 && !addingFilament && (
+                  <p className="text-xs text-[#4a4f5a] text-center py-3">No filament assigned yet</p>
+                )}
+              </div>
+
+              {/* Price editor */}
               <div>
                 <p className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold mb-2">Price (GBP)</p>
                 <div className="flex gap-2">
@@ -152,8 +259,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                     <input type="number" min="0" step="0.01" value={price}
                       onChange={e => { setPrice(e.target.value); setPriceChanged(true); }}
                       onBlur={savePrice} placeholder="0.00"
-                      className="w-full bg-[#0e1014] border border-[#1e2228] rounded-2xl pl-7 pr-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors"
-                    />
+                      className="w-full bg-[#0e1014] border border-[#1e2228] rounded-2xl pl-7 pr-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors" />
                   </div>
                   {priceChanged && (
                     <button onClick={savePrice} disabled={savingPrice}
@@ -164,15 +270,12 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                 </div>
               </div>
 
+              {/* Notes */}
               <div>
                 <p className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold mb-2">Notes</p>
-                <textarea value={notes}
-                  onChange={e => { setNotes(e.target.value); setNotesChanged(true); }}
-                  onBlur={saveNotes}
-                  placeholder="Filament colour, infill %, print settings..."
-                  rows={3}
-                  className="w-full bg-[#0e1014] border border-[#1e2228] rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors resize-none"
-                />
+                <textarea value={notes} onChange={e => { setNotes(e.target.value); setNotesChanged(true); }}
+                  onBlur={saveNotes} placeholder="Filament colour, infill %, print settings..." rows={3}
+                  className="w-full bg-[#0e1014] border border-[#1e2228] rounded-2xl px-4 py-3 text-sm text-[#e8e8e8] placeholder-[#2e333d] outline-none focus:border-[#22c55e] transition-colors resize-none" />
                 {notesChanged && (
                   <button onClick={saveNotes} disabled={savingNotes}
                     className="mt-2 px-4 py-2 bg-[#22c55e] hover:bg-[#16a34a] text-black text-sm font-bold rounded-2xl transition-colors">
@@ -181,6 +284,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                 )}
               </div>
 
+              {/* Status */}
               <div>
                 <p className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold mb-3">Update Status</p>
                 <div className="space-y-2">
@@ -189,9 +293,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                     const active = order.status === s;
                     return (
                       <button key={s} onClick={() => onStatusChange(order.id, s)}
-                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border text-sm font-medium transition-colors ${
-                          active ? `border-current ${cfg.text} bg-[#0e1014]` : 'border-[#1e2228] text-[#4a4f5a] hover:border-[#2e333d] hover:text-[#e8e8e8]'
-                        }`}>
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border text-sm font-medium transition-colors ${active ? `border-current ${cfg.text} bg-[#0e1014]` : 'border-[#1e2228] text-[#4a4f5a] hover:border-[#2e333d] hover:text-[#e8e8e8]'}`}>
                         <span className={`w-2 h-2 rounded-full shrink-0 ${active ? cfg.dot : 'bg-[#2e333d]'}`} />
                         {s}
                         {active && <span className="ml-auto text-xs opacity-60">Current</span>}
@@ -201,10 +303,9 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                 </div>
               </div>
 
-              <button
-                onClick={() => { onDelete(order.id); onClose(); }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors mb-4"
-              >
+              {/* Delete */}
+              <button onClick={() => { onDelete(order.id); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors mb-4">
                 <IconTrash size={14} />
                 Delete Order
               </button>
