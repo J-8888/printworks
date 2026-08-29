@@ -100,6 +100,10 @@ const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
 // ── Orders ──────────────────────────────────────────────
+app.get('/ping', (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.get('/api/orders', requireAuth, async (_req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
