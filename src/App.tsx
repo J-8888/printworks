@@ -164,11 +164,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {page === 'orders' && <OrdersPage orders={orders} ... />}
-            {page === 'review' && <ReviewPage orders={orders} onReviewed={handleReviewed} key={refreshKey} />}
-            {page === 'customers' && <CustomersPage ... />}
-            {page === 'archive' && <ArchivePage ... />}
-            {page === 'filament' && <FilamentPage ... />}
+          {page === 'review' && <ReviewPage orders={orders} onReviewed={handleReviewed} key={refreshKey} />}
           </>
         )}
       </main>
