@@ -23,16 +23,17 @@ const pool = new Pool({
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
-      id SERIAL PRIMARY KEY,
-      order_number TEXT NOT NULL,
-      customer TEXT NOT NULL,
-      item TEXT NOT NULL,
-      total_gbp REAL NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending',
-      notes TEXT NOT NULL DEFAULT '',
-      phone TEXT NOT NULL DEFAULT '',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
+    id SERIAL PRIMARY KEY,
+    order_number TEXT NOT NULL,
+    customer TEXT NOT NULL,
+    item TEXT NOT NULL,
+    total_gbp REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed BOOLEAN NOT NULL DEFAULT false,
+    deny_reason TEXT
+)
+
   `);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`);
