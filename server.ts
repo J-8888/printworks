@@ -23,20 +23,21 @@ const pool = new Pool({
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    order_number TEXT NOT NULL,
-    customer TEXT NOT NULL,
-    item TEXT NOT NULL,
-    total_gbp REAL NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    reviewed BOOLEAN NOT NULL DEFAULT false,
-    deny_reason TEXT
-)
-
+      id SERIAL PRIMARY KEY,
+      order_number TEXT NOT NULL,
+      customer TEXT NOT NULL,
+      item TEXT NOT NULL,
+      total_gbp REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      reviewed BOOLEAN NOT NULL DEFAULT false,
+      deny_reason TEXT
+    )
   `);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT ''`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS reviewed BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deny_reason TEXT`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS filaments (
@@ -61,8 +62,6 @@ async function initDb() {
       filament_id INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
       grams_used REAL NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      reviewed BOOLEAN NOT NULL DEFAULT false,
-      deny_reason TEXT
     )
   `);
 }
