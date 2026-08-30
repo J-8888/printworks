@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Order, reviewOrder } from '@/api/orders';
+import { reviewOrder } from '@/api/orders';
+import type { Order } from '@/types/order';
 
 interface Props {
   orders: Order[];
