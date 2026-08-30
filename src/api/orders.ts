@@ -48,4 +48,17 @@ export function logout() {
   _token = '';
   fetch(`${API_BASE}/logout`, { method: 'POST', headers: { 'x-auth-token': token } })
     .finally(() => { window.location.href = '/login.html'; });
+
+  export async function reviewOrder(id: string, status: 'accept' | 'deny', reason?: string) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api/orders/${id}/review`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ reviewed: true, status, denyReason: reason })
+  });
+  if (!res.ok) throw new Error('Failed to review order');
+  return res.json();
 }
