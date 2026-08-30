@@ -14,7 +14,7 @@ import type { Order, OrderStatus } from '@/types/order';
 import * as api from '@/api/orders';
 import * as filamentApi from '@/api/filaments';
 
-export type Page = 'orders' | 'customers' | 'archive' | 'filament';
+export type Page = 'orders' | 'customers' | 'archive' | 'filament' | 'review';
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState('');
@@ -164,14 +164,20 @@ export default function App() {
           </div>
         ) : (
           <>
-            {page === 'orders' && <OrdersPage orders={activeOrders} onSelectOrder={setSelectedOrder} />}
-            {page === 'customers' && <CustomersPage orders={orders} onSelectOrder={setSelectedOrder} />}
-            {page === 'archive' && <ArchivePage orders={archivedOrders} onSelectOrder={setSelectedOrder} />}
-            {page === 'filament' && <FilamentPage />}
+            {page === 'orders' && <OrdersPage orders={orders} ... />}
+            {page === 'review' && <ReviewPage orders={orders} onReviewed={handleReviewed} key={refreshKey} />}
+            {page === 'customers' && <CustomersPage ... />}
+            {page === 'archive' && <ArchivePage ... />}
+            {page === 'filament' && <FilamentPage ... />}
           </>
         )}
       </main>
-
+       
+      {/* Desktop-only Analytics Dashboard */}
+      <div className="hidden lg:block fixed top-4 right-4 w-80 bg-white rounded-xl shadow-lg z-10 p-4">
+        <AnalyticsPage orders={orders} />
+      </div>
+      
       <BottomNav page={page} onNavigate={setPage} activeCount={activeOrders.filter(o => o.status === 'Pending').length} />
 
       <AddOrderModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
