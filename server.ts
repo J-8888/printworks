@@ -60,6 +60,8 @@ async function initDb() {
       filament_id INTEGER NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
       grams_used REAL NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      reviewed BOOLEAN NOT NULL DEFAULT false,
+      deny_reason TEXT
     )
   `);
 }
@@ -129,6 +131,29 @@ app.post('/api/orders', async (req, res) => {
     );
     res.status(201).json(mapOrder(rows[0]));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to create order' }); }
+});
+
+app.patch('/api/orders/:id/review', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { status, denyReason } = req.body;
+  
+  try {
+    if (status === 'accept') {
+      await pool.query(
+        'UPDATE orders SET reviewed = true, status = $1 WHERE id = $2',
+        ['Pending', id]
+      );
+    } else {
+      await pool.query(
+        'UPDATE orders SET reviewed = true, status = $1, deny_reason = $2 WHERE id = $3',
+        ['Denied', denyReason || '', id]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Review failed' });
+  }
 });
 
 app.patch('/api/orders/:id', requireAuth, async (req, res) => {
