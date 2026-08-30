@@ -1,4 +1,4 @@
-import type { Order } from '@/api/orders';
+import type { Order } from '@/types/orders';
 
 interface Props {
   orders: Order[];
