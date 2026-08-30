@@ -1,3 +1,5 @@
+import ReviewPage from './sections/ReviewPage';
+import AnalyticsPage from './sections/AnalyticsPage';
 import React, { useState, useCallback, useEffect } from 'react';
 import { BottomNav } from '@/sections/BottomNav';
 import { OrdersPage } from '@/sections/OrdersPage';
@@ -6,6 +8,8 @@ import { ArchivePage } from '@/sections/ArchivePage';
 import { FilamentPage } from '@/sections/FilamentPage';
 import { AddOrderModal } from '@/components/AddOrderModal';
 import { OrderDetailModal } from '@/components/OrderDetailModal';
+import ReviewPage from '@/sections/ReviewPage';
+import AnalyticsPage from '@/sections/AnalyticsPage';
 import type { Order, OrderStatus } from '@/types/order';
 import * as api from '@/api/orders';
 import * as filamentApi from '@/api/filaments';
@@ -88,7 +92,9 @@ export default function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [page, setPage] = useState<Page>('orders');
-
+  const [refreshKey, setRefreshKey] = useState(0);
+  const handleReviewed = () => setRefreshKey(prev => prev + 1);
+  
   useEffect(() => {
     if (!loggedIn) return;
     api.fetchOrders().then((data) => {
