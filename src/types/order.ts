@@ -7,7 +7,8 @@ export interface Order {
   item: string;
   totalGbp: number;
   status: OrderStatus;
-  notes: string;
-  phone: string;
-  createdAt: Date;
+  createdAt: string;
+  notes?: string;
+  phone?: string;
+  reviewed: boolean;
 }
