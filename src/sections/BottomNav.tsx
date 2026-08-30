@@ -19,6 +19,13 @@ export function BottomNav({ page, onNavigate, activeCount }: BottomNavProps) {
         </svg>
       ),
     },
+    
+    {
+    page: 'review',
+    label: 'Review',
+    icon: <span style={{ fontSize: '20px' }}>⏳</span>,
+    },
+    
     {
       page: 'customers',
       label: 'Customers',
