@@ -8,8 +8,6 @@ import { ArchivePage } from '@/sections/ArchivePage';
 import { FilamentPage } from '@/sections/FilamentPage';
 import { AddOrderModal } from '@/components/AddOrderModal';
 import { OrderDetailModal } from '@/components/OrderDetailModal';
-import ReviewPage from '@/sections/ReviewPage';
-import AnalyticsPage from '@/sections/AnalyticsPage';
 import type { Order, OrderStatus } from '@/types/order';
 import * as api from '@/api/orders';
 import * as filamentApi from '@/api/filaments';
