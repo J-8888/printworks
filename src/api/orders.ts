@@ -70,4 +70,5 @@ export function logout() {
   });
   if (!res.ok) throw new Error('Failed to review order');
   return res.json();
+ }
 }
