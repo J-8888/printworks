@@ -146,7 +146,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange, onDelete }: O
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold">Created</span>
-                  <span className="text-sm text-[#8a8f9a]">{formatDate(order.createdAt)}</span>
+                  <span className="text-sm text-[#8a8f9a]">{formatDate(order.createdAt as Date)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-[#4a4f5a] uppercase tracking-wider font-semibold">Status</span>
