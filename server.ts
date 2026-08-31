@@ -135,21 +135,24 @@ app.post('/api/orders', async (req, res) => {
 
 app.patch('/api/orders/:id/review', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { status, denyReason } = req.body;
-  
+  const { action, denyReason } = req.body;
   try {
-    if (status === 'accept') {
-      await pool.query(
-        'UPDATE orders SET reviewed = true, status = $1 WHERE id = $2',
+    let rows;
+    if (action === 'accept') {
+      const result = await pool.query(
+        'UPDATE orders SET reviewed = true, status = $1 WHERE id = $2 RETURNING *',
         ['Pending', id]
       );
+      rows = result.rows;
     } else {
-      await pool.query(
-        'UPDATE orders SET reviewed = true, status = $1, deny_reason = $2 WHERE id = $3',
+      const result = await pool.query(
+        'UPDATE orders SET reviewed = true, status = $1, deny_reason = $2 WHERE id = $3 RETURNING *',
         ['Denied', denyReason || '', id]
       );
+      rows = result.rows;
     }
-    res.json({ success: true });
+    if (rows.length === 0) return res.status(404).json({ error: 'Order not found' });
+    res.json(mapOrder(rows[0]));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Review failed' });
@@ -301,7 +304,7 @@ function mapOrder(row: any) {
   return {
     id: String(row.id), orderNumber: row.order_number, customer: row.customer,
     item: row.item, totalGbp: row.total_gbp, status: row.status,
-    notes: row.notes || '', phone: row.phone || '', createdAt: row.created_at,
+    notes: row.notes || '', phone: row.phone || '', reviewed: row.reviewed ?? false, createdAt: row.created_at,
   };
 }
 
