@@ -1,11 +1,11 @@
-import ReviewPage from './sections/ReviewPage';
-import AnalyticsPage from './sections/AnalyticsPage';
 import React, { useState, useCallback, useEffect } from 'react';
 import { BottomNav } from '@/sections/BottomNav';
 import { OrdersPage } from '@/sections/OrdersPage';
 import { CustomersPage } from '@/sections/CustomersPage';
 import { ArchivePage } from '@/sections/ArchivePage';
 import { FilamentPage } from '@/sections/FilamentPage';
+import { ReviewPage } from '@/sections/ReviewPage';
+import { AnalyticsPage } from '@/sections/AnalyticsPage';
 import { AddOrderModal } from '@/components/AddOrderModal';
 import { OrderDetailModal } from '@/components/OrderDetailModal';
 import type { Order, OrderStatus } from '@/types/order';
@@ -90,16 +90,19 @@ export default function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [page, setPage] = useState<Page>('orders');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const handleReviewed = () => setRefreshKey(prev => prev + 1);
-  
+
+  const loadOrders = useCallback(async () => {
+    try {
+      const data = await api.fetchOrders();
+      setOrders(data);
+    } catch {}
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!loggedIn) return;
-    api.fetchOrders().then((data) => {
-      setOrders(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [loggedIn]);
+    loadOrders();
+  }, [loggedIn, loadOrders]);
 
   const handleAdd = useCallback(async (data: Omit<Order, 'id' | 'orderNumber' | 'createdAt'>) => {
     const order = await api.createOrder(data);
@@ -120,8 +123,11 @@ export default function App() {
 
   if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />;
 
-  const activeOrders = orders.filter((o) => o.status !== 'Collected');
+  const activeOrders = orders.filter((o) => o.status !== 'Collected' && o.reviewed);
   const archivedOrders = orders.filter((o) => o.status === 'Collected');
+  const reviewOrders = orders.filter((o) => !o.reviewed);
+  const pendingCount = activeOrders.filter(o => o.status === 'Pending').length;
+  const reviewCount = reviewOrders.length;
 
   return (
     <div className="min-h-screen bg-[#0e1014] flex flex-col">
@@ -136,7 +142,7 @@ export default function App() {
           <span className="text-sm font-bold text-[#e8e8e8] tracking-tight">PRINTWORKS</span>
         </div>
         <div className="flex items-center gap-2">
-          {page !== 'filament' && (
+          {page !== 'filament' && page !== 'review' && (
             <button onClick={() => setAddOpen(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-[#22c55e] hover:bg-[#16a34a] active:scale-95 text-black text-sm font-bold rounded-xl transition-all">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -162,17 +168,21 @@ export default function App() {
           </div>
         ) : (
           <>
-          {page === 'review' && <ReviewPage orders={orders} onReviewed={handleReviewed} key={refreshKey} />}
+            {page === 'orders' && <OrdersPage orders={activeOrders} onSelectOrder={setSelectedOrder} />}
+            {page === 'review' && <ReviewPage orders={reviewOrders} onReviewed={loadOrders} />}
+            {page === 'customers' && <CustomersPage orders={orders} onSelectOrder={setSelectedOrder} />}
+            {page === 'archive' && <ArchivePage orders={archivedOrders} onSelectOrder={setSelectedOrder} />}
+            {page === 'filament' && <FilamentPage />}
           </>
         )}
       </main>
-       
+
       {/* Desktop-only Analytics Dashboard */}
-      <div className="hidden lg:block fixed top-4 right-4 w-80 bg-white rounded-xl shadow-lg z-10 p-4">
+      <div className="hidden lg:block fixed top-16 right-4 w-80 z-10">
         <AnalyticsPage orders={orders} />
       </div>
-      
-      <BottomNav page={page} onNavigate={setPage} activeCount={activeOrders.filter(o => o.status === 'Pending').length} />
+
+      <BottomNav page={page} onNavigate={setPage} activeCount={pendingCount} reviewCount={reviewCount} />
 
       <AddOrderModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
       <OrderDetailModal
