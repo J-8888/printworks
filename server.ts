@@ -319,5 +319,15 @@ function mapFilament(row: any) {
 }
 
 initDb()
-  .then(() => { app.listen(PORT, () => console.log(`PrintWorks API running on port ${PORT}`)); })
+  .then(() => { app.listen(PORT, () => console.log(`PrintWorks API running on port ${PORT}`)); 
+              // Route to show your phone number at ://yourwebsite.com
+app.get('/help', (req, res) => {
+    res.send(`
+        <div style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+            <h1>Need Help?</h1>
+            <p>You can reach me directly at:</p>
+            <p><a href="tel:+1234567890" style="font-size: 24px; color: #0070f3; font-weight: bold; text-decoration: none;">+1 (234) 567-890</a></p>
+        </div>
+    `);
+});
   .catch((err) => { console.error('Failed to initialise database:', err); process.exit(1); });
