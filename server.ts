@@ -319,5 +319,5 @@ function mapFilament(row: any) {
 }
 
 initDb()
-  .then(() => { app.listen(PORT, () => console.log(`PrintWorks API running on port ${PORT}`)); });
+  then(() => { app.listen(PORT, () => console.log(`PrintWorks API running on port ${PORT}`)); });
   .catch((err) => { console.error('Failed to initialise database:', err); process.exit(1); });
